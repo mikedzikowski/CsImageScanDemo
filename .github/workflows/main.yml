@@ -35,17 +35,12 @@ jobs:
         run: |
           echo Add other actions to build,
           echo test, and deploy your project.
-    
-      - name: Scan and Upload to Falcon
-        uses: crowdstrike/fcs-action@v2.0.2
+
+      - name: Run FCS IaC Scan
+        uses: crowdstrike/fcs-action@v2.0.0
         with:
           falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
           falcon_region: 'us-1'
-          scan_type: image
-          image: nginx:latest
-          upload_results: true
-          minimum_severity: low
-          output_path: './upload-results/'
-          report_formats: json
+          path: './'
         env:
           FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
