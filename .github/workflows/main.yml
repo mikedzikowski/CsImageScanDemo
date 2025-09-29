@@ -36,6 +36,11 @@ jobs:
           echo Add other actions to build,
           echo test, and deploy your project.
 
+      - name: Debug
+        run: |
+          echo "Checking if variables are set (will show as empty if set)"
+          echo "FALCON_CLIENT_ID is set: ${{ vars.FALCON_CLIENT_ID != '' }}"
+          
       - name: Run FCS IaC Scan
         uses: crowdstrike/fcs-action@v2.0.0
         with:
