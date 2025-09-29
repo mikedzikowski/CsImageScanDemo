@@ -36,7 +36,7 @@ jobs:
           --client-secret "$FSCSECRET" \
           --region us-1 \
           --type falcon-sensor \
-          --copy crmiked.azurecr.io/falcon-sensor
+          --copy crmiked.azurecr.io
 
       - name: Run FCS IaC Scan
         uses: crowdstrike/fcs-action@v2.0.0
