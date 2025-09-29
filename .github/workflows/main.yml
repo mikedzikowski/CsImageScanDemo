@@ -31,23 +31,6 @@ jobs:
             echo "FALCON_CLIENT_SECRET is NOT set"
           fi
 
-      - name: Run FCS IaC Scan
-        uses: crowdstrike/fcs-action@v2.0.0
-        env:
-          INPUT_FALCON_CLIENT_ID: ${{ vars.FALCON_CLIENT_ID }}
-          FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-        with:
-          falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
-          falcon_region: 'us-1'
-          path: './'
-
-      # Login to Azure
-      - name: Azure login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # Login to ACR
       - name: Login to ACR
         uses: azure/docker-login@v1
         with:
@@ -55,7 +38,6 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # Download and prepare Falcon Container Sensor
       - name: Download and Process Falcon Container Sensor
         env:
           FCSCLIENTID: ${{ vars.FALCON_CLIENT_ID }}
@@ -65,19 +47,20 @@ jobs:
           curl -sSL -o falcon-container-sensor-pull.sh https://github.com/CrowdStrike/falcon-scripts/releases/latest/download/falcon-container-sensor-pull.sh
           chmod 777 ./falcon-container-sensor-pull.sh
 
-          # Get the latest sensor tag and pull token
-          export SENSOR=$(bash ./falcon-container-sensor-pull.sh -u $FCSCLIENTID -s $FSCSECRET --type falcon-sensor --list-tags)
-          export LATEST_SENSOR_TAG=$(echo "$SENSOR" | jq -r '.tags | sort | last')
-          export PULLTOKEN=$(bash ./falcon-container-sensor-pull.sh -u $FCSCLIENTID -s $FSCSECRET --type falcon-sensor --get-pull-token)
-
           # Copy to ACR
           ./falcon-container-sensor-pull.sh \
-          --client-id $FCSCLIENTID \
-          --client-secret $FSCSECRET \
+          --client-id "$FCSCLIENTID" \
+          --client-secret "$FSCSECRET" \
           --region us-1 \
           --type falcon-sensor \
-          --copy crmiked.azurecr.io/falcon-sensor:$LATEST_SENSOR_TAG
+          --copy crmiked.azurecr.io/falcon-sensor
 
-          # Tag as latest as well
-          docker tag crmiked.azurecr.io/falcon-sensor:$LATEST_SENSOR_TAG crmiked.azurecr.io/falcon-sensor:latest
-          docker push crmiked.azurecr.io/falcon-sensor:latest
+      - name: Run FCS IaC Scan
+        uses: crowdstrike/fcs-action@v2.0.0
+        env:
+          INPUT_FALCON_CLIENT_ID: ${{ vars.FALCON_CLIENT_ID }}
+          FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
+        with:
+          falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
+          falcon_region: 'us-1'
+          path: './'
