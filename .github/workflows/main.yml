@@ -91,6 +91,8 @@ jobs:
       #if: steps.fcs.outputs.exit-code != 0
       with:
         sarif_file: './scan-results'
+        category: 'scan'  # Example category name
+        wait-for-processing: true
             
     - name: Workflow Summary
       run: |
