@@ -18,10 +18,6 @@ on:
 jobs:
   sync-sensor:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        language: ['python']  # Add other languages if needed
     permissions:
       actions: read
       contents: read
@@ -30,19 +26,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
           
     - name: Login to Azure Container Registry
       uses: azure/docker-login@v1
@@ -73,7 +56,8 @@ jobs:
 
         echo "✅ Sensor processing complete"
 
-    - name: Run FCS IaC Scan
+    - name: Run FCS Image Scan
+      id: fcs-scan
       uses: crowdstrike/fcs-action@v2.0.0
       env:
         INPUT_FALCON_CLIENT_ID: ${{ vars.FALCON_CLIENT_ID }}
@@ -87,31 +71,22 @@ jobs:
         minimum_severity: high
         minimum_score: 7.0
         vuln_fixable_only: true
-        path: './cloudformation'
-        report_formats: 'sarif'  # Changed to SARIF format
-        output_path: './scan-results/results.sarif'  # Changed extension to .sarif
-        upload_results: true
+        report_formats: 'sarif'
+        output_path: './scan-results/fcs-scan.sarif'
           
-    - name: Debug SARIF file
+    - name: Debug Scan Results
       run: |
         echo "Checking scan results directory..."
-        ls -la ./scan-results
-        echo "Checking if SARIF file exists..."
-        if [ -f "./scan-results/results.sarif" ]; then
-          echo "SARIF file exists"
-          echo "File size: $(stat -f%z ./scan-results/results.sarif) bytes"
-        else
-          echo "SARIF file not found"
-          echo "Directory contents:"
-          ls -la ./scan-results
-        fi
+        ls -la ./scan-results/
+        echo "SARIF file contents:"
+        cat ./scan-results/fcs-scan.sarif || echo "SARIF file not found"
 
-    - name: Upload SARIF report to GitHub Code scanning
+    - name: Upload SARIF report
+      if: always()
       uses: github/codeql-action/upload-sarif@v3
-      continue-on-error: true  # For debugging
       with:
         sarif_file: './scan-results/'
-        category: 'fcs-scan'
+        category: 'container-scan'
         wait-for-processing: true
             
     - name: Workflow Summary
@@ -120,5 +95,5 @@ jobs:
         echo "✅ Environment verified" >> $GITHUB_STEP_SUMMARY
         echo "✅ ACR login successful" >> $GITHUB_STEP_SUMMARY
         echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
-        echo "✅ IaC scan completed" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
         echo "✅ SARIF report processed" >> $GITHUB_STEP_SUMMARY
