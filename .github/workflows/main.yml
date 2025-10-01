@@ -1,74 +1,4 @@
-# .github/workflows/falcon-sensor.yml
-
-name: Falcon Sensor ACR Sync
-
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  workflow_dispatch:
-  schedule:
-    - cron: '0 * * * *'
-
-jobs:
-  sync-sensor:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-          
-    - name: Login to Azure Container Registry
-      uses: azure/docker-login@v1
-      with:
-        login-server: crmiked.azurecr.io
-        username: ${{ secrets.ACR_USERNAME }}
-        password: ${{ secrets.ACR_PASSWORD }}
-
-    - name: Create scan results directory
-      run: mkdir -p ./scan-results
-
-    - name: Download and Process Falcon Container Sensor
-      env:
-        FCSCLIENTID: ${{ vars.FALCON_CLIENT_ID }}
-        FSCSECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-      run: |
-        echo "⬇️ Downloading Falcon Container Sensor pull script..."
-        curl -sSL -o falcon-container-sensor-pull.sh https://github.com/CrowdStrike/falcon-scripts/releases/latest/download/falcon-container-sensor-pull.sh
-        chmod 777 ./falcon-container-sensor-pull.sh
-
-        echo "🔄 Copying sensor to ACR..."
-        ./falcon-container-sensor-pull.sh \
-        --client-id "$FCSCLIENTID" \
-        --client-secret "$FSCSECRET" \
-        --region us-1 \
-        --type falcon-sensor \
-        --copy crmiked.azurecr.io/falcon-sensor
-
-    - name: Run FCS Image Scan
-      id: fcs-scan
-      uses: crowdstrike/fcs-action@v2.0.0
-      env:
-        INPUT_FALCON_CLIENT_ID: ${{ vars.FALCON_CLIENT_ID }}
-        FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-      with:
-        falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
-        falcon_region: 'us-1'
-        scan_type: image
-        image: nginx:latest
-        vulnerability_only: true
-        minimum_severity: high
-        minimum_score: 7.0
-        vuln_fixable_only: true
-        report_formats: 'json'
-        output_path: './scan-results/results.json'
-
-    - name: Convert JSON to SARIF
+- name: Convert JSON to SARIF
       run: |
         mkdir -p ./scan-results
         
@@ -83,13 +13,27 @@ jobs:
                   "driver": {
                     "name": "Falcon Container Security",
                     "informationUri": "https://www.crowdstrike.com/",
-                    "rules": []
+                    "rules": [
+                      {
+                        "id": "container-security",
+                        "shortDescription": {
+                          "text": "Container Security Scan"
+                        },
+                        "fullDescription": {
+                          "text": "Scans containers for security vulnerabilities"
+                        },
+                        "help": {
+                          "text": "Container security scanning results from Falcon Container Security"
+                        }
+                      }
+                    ]
                   }
                 },
                 "results": [inputs | .[] | select(.path != null) | {
-                  "ruleId": .path,
+                  "ruleId": "container-security",
+                  "level": "warning",
                   "message": {
-                    "text": ("File: " + .path + ", Size: " + (.size|tostring) + ", Permissions: " + .permissions)
+                    "text": ("Container file: " + .path + " | Size: " + (.size|tostring) + " | Permissions: " + .permissions)
                   },
                   "locations": [{
                     "physicalLocation": {
@@ -97,48 +41,37 @@ jobs:
                         "uri": .path
                       },
                       "region": {
-                        "startLine": 1
+                        "startLine": 1,
+                        "endLine": 1,
+                        "startColumn": 1,
+                        "endColumn": 1
                       }
                     }
-                  }]
+                  }],
+                  "partialFingerprints": {
+                    "primaryLocationLineHash": (.path + .size|tostring)
+                  }
                 }]
               }
             ]
           }
           ' --slurpfile input ./scan-results/results.json > ./scan-results/scan.sarif
+
+          # Validate SARIF file
+          echo "Validating SARIF file..."
+          if jq empty ./scan-results/scan.sarif; then
+            echo "SARIF file is valid JSON"
+          else
+            echo "SARIF file is invalid JSON"
+            exit 1
+          fi
         else
           echo "No results found in results.json"
           exit 1
         fi
 
-    - name: Verify SARIF file
+    - name: Debug SARIF Content
       run: |
-        if [ -f "./scan-results/scan.sarif" ]; then
-          echo "SARIF file contents:"
-          cat ./scan-results/scan.sarif
-        else
-          echo "SARIF file not found"
-          exit 1
-        fi
-
-    - name: Upload SARIF report
-      if: always()
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: './scan-results/'
-        category: 'container-scan'
-        wait-for-processing: true
-            
-    - name: Workflow Summary
-      if: always()
-      run: |
-        echo "## Falcon Sensor Sync Complete" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Environment verified" >> $GITHUB_STEP_SUMMARY
-        echo "✅ ACR login successful" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
-        if [ -f "./scan-results/scan.sarif" ]; then
-          echo "✅ SARIF report generated" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ SARIF report generation failed" >> $GITHUB_STEP_SUMMARY
-        fi
+        echo "SARIF file contents:"
+        cat ./scan-results/scan.sarif
+        echo "File size: $(stat -f%z ./scan-results/scan.sarif) bytes"
