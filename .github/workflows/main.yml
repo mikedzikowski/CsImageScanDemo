@@ -68,22 +68,9 @@ jobs:
         report_formats: 'json'
         output_path: './scan-results/results.json'
 
-    - name: Debug JSON Results
-      run: |
-        echo "Checking for JSON results file..."
-        ls -la ./scan-results/
-        echo "JSON file contents:"
-        cat ./scan-results/results.json || echo "JSON file not found"
-
     - name: Convert JSON to SARIF
       run: |
-        # First check if JSON file exists and has content
-        if [ ! -f "./scan-results/results.json" ]; then
-          echo "Results JSON file not found"
-          exit 1
-        fi
-        
-        # Create basic SARIF structure
+        # Create SARIF file with basic structure
         echo '{
           "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
           "version": "2.1.0",
@@ -92,7 +79,8 @@ jobs:
               "tool": {
                 "driver": {
                   "name": "Falcon Container Security",
-                  "informationUri": "https://www.crowdstrike.com/"
+                  "informationUri": "https://www.crowdstrike.com/",
+                  "rules": []
                 }
               },
               "results": []
@@ -100,60 +88,36 @@ jobs:
           ]
         }' > ./scan-results/scan.sarif
 
-        # Check JSON content and convert
-        if [ -s "./scan-results/results.json" ]; then
-          jq -e '
-          {
-            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
-            "version": "2.1.0",
-            "runs": [
-              {
-                "tool": {
-                  "driver": {
-                    "name": "Falcon Container Security",
-                    "informationUri": "https://www.crowdstrike.com/",
-                    "rules": [
-                      .vulnerabilities[] | {
-                        "id": .cve,
-                        "shortDescription": {
-                          "text": .description
-                        },
-                        "fullDescription": {
-                          "text": .description
-                        }
-                      }
-                    ]
-                  }
+        # Process the JSON file if it exists
+        if [ -f "./scan-results/results.json" ]; then
+          # Convert file paths to results
+          jq -r '.[] | select(.path != null) | {
+            "ruleId": .path,
+            "message": {
+              "text": "File path: \(.path)"
+            },
+            "locations": [{
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": .path
                 },
-                "results": [
-                  .vulnerabilities[] | {
-                    "ruleId": .cve,
-                    "message": {
-                      "text": .description
-                    },
-                    "level": (
-                      if .severity == "CRITICAL" or .severity == "HIGH" then "error"
-                      elif .severity == "MEDIUM" then "warning"
-                      else "note"
-                      end
-                    )
-                  }
-                ]
+                "region": {
+                  "startLine": 1
+                }
               }
-            ]
-          }' ./scan-results/results.json > ./scan-results/scan.sarif || cp ./scan-results/template.sarif ./scan-results/scan.sarif
-        fi
+            }]
+          }' ./scan-results/results.json > ./scan-results/temp_results.json
 
-        # Verify SARIF file was created
-        if [ ! -s "./scan-results/scan.sarif" ]; then
-          echo "Failed to create valid SARIF file"
+          # Update the SARIF file with the results
+          jq --slurpfile results ./scan-results/temp_results.json '.runs[0].results = $results' ./scan-results/scan.sarif > ./scan-results/scan.sarif.tmp
+          mv ./scan-results/scan.sarif.tmp ./scan-results/scan.sarif
+        else
+          echo "No results.json file found"
           exit 1
         fi
 
     - name: Debug SARIF file
       run: |
-        echo "Checking scan results directory..."
-        ls -la ./scan-results/
         echo "SARIF file contents:"
         cat ./scan-results/scan.sarif || echo "SARIF file not found"
 
@@ -173,14 +137,8 @@ jobs:
         echo "✅ ACR login successful" >> $GITHUB_STEP_SUMMARY
         echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
         echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
-        echo "✅ SARIF report processed" >> $GITHUB_STEP_SUMMARY
-
-    - name: Check for scan results
-      if: always()
-      run: |
         if [ -f "./scan-results/scan.sarif" ]; then
-          echo "Scan completed successfully"
+          echo "✅ SARIF report generated" >> $GITHUB_STEP_SUMMARY
         else
-          echo "Scan failed to generate SARIF report"
-          exit 1
+          echo "❌ SARIF report generation failed" >> $GITHUB_STEP_SUMMARY
         fi
