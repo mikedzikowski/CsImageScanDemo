@@ -76,22 +76,22 @@ jobs:
         with:
           falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
           falcon_region: 'us-1'
-          path: './vuln-results/'
           scan_type: image
           image: alpine:latest
           vulnerability_only: true
           minimum_severity: high
           minimum_score: 7.0
           vuln_fixable_only: true
-          report_formats: json,sarif
-          output_path: './vuln-results/results.sarif'
+          path: './cloudformation'
+          report_formats: 'sarif'
+          output_path: './scan-results'
           upload_results: true
           
       - name: Upload SARIF report to GitHub Code scanning
         uses: github/codeql-action/upload-sarif@v3
         #if: steps.fcs.outputs.exit-code != 0
         with:
-          sarif_file: './vuln-results/results.sarif'
+          sarif_file: './scan-results'
               
       - name: Workflow Summary
         run: |
