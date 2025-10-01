@@ -59,8 +59,8 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2
         with:
-          category: "/language:${{matrix.language}
-
+          category: "/language:${{matrix.language}"
+          
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
