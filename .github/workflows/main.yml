@@ -84,7 +84,7 @@ jobs:
           vuln_fixable_only: true
           path: './cloudformation'
           report_formats: 'sarif'
-          output_path: './scan-results'
+          output_path: './scan-results/results.sarif'
           upload_results: true
           
       - name: Upload SARIF report to GitHub Code scanning
