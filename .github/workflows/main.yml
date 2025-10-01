@@ -15,10 +15,13 @@ on:
   schedule:
     - cron: '0 * * * *'
 
-
 jobs:
   sync-sensor:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['python']  # Add other languages if needed
     permissions:
       actions: read
       contents: read
@@ -48,6 +51,9 @@ jobs:
         username: ${{ secrets.ACR_USERNAME }}
         password: ${{ secrets.ACR_PASSWORD }}
 
+    - name: Create scan results directory
+      run: mkdir -p ./scan-results
+
     - name: Download and Process Falcon Container Sensor
       env:
         FCSCLIENTID: ${{ vars.FALCON_CLIENT_ID }}
@@ -65,7 +71,7 @@ jobs:
         --type falcon-sensor \
         --copy crmiked.azurecr.io/falcon-sensor
 
-          echo "✅ Sensor processing complete"
+        echo "✅ Sensor processing complete"
 
     - name: Run FCS IaC Scan
       uses: crowdstrike/fcs-action@v2.0.0
@@ -82,16 +88,30 @@ jobs:
         minimum_score: 7.0
         vuln_fixable_only: true
         path: './cloudformation'
-        report_formats: 'json'
-        output_path: './scan-results/results.json'
+        report_formats: 'sarif'  # Changed to SARIF format
+        output_path: './scan-results/results.sarif'  # Changed extension to .sarif
         upload_results: true
           
+    - name: Debug SARIF file
+      run: |
+        echo "Checking scan results directory..."
+        ls -la ./scan-results
+        echo "Checking if SARIF file exists..."
+        if [ -f "./scan-results/results.sarif" ]; then
+          echo "SARIF file exists"
+          echo "File size: $(stat -f%z ./scan-results/results.sarif) bytes"
+        else
+          echo "SARIF file not found"
+          echo "Directory contents:"
+          ls -la ./scan-results
+        fi
+
     - name: Upload SARIF report to GitHub Code scanning
       uses: github/codeql-action/upload-sarif@v3
-      #if: steps.fcs.outputs.exit-code != 0
+      continue-on-error: true  # For debugging
       with:
-        sarif_file: './scan-results'
-        category: 'scan'  # Example category name
+        sarif_file: './scan-results/results.sarif'
+        category: 'fcs-scan'
         wait-for-processing: true
             
     - name: Workflow Summary
@@ -101,3 +121,4 @@ jobs:
         echo "✅ ACR login successful" >> $GITHUB_STEP_SUMMARY
         echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
         echo "✅ IaC scan completed" >> $GITHUB_STEP_SUMMARY
+        echo "✅ SARIF report processed" >> $GITHUB_STEP_SUMMARY
