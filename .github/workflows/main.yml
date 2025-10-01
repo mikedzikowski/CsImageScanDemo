@@ -18,6 +18,10 @@ on:
 jobs:
   sync-sensor:
     runs-on: ubuntu-latest
+    actions: read
+    contents: read
+    security-events: write
+
     
     steps:
       - name: Checkout Repository
@@ -41,6 +45,16 @@ jobs:
             echo "❌ FALCON_CLIENT_SECRET is NOT set"
             exit 1
           fi
+  
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+  
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:${{matrix.language}
 
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
