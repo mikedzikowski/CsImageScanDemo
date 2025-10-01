@@ -68,10 +68,19 @@ jobs:
         report_formats: 'json'
         output_path: './scan-results/results.json'
 
+    - name: Debug JSON file
+      run: |
+        echo "Content of results.json:"
+        cat ./scan-results/results.json || echo "File not found"
+
     - name: Convert JSON to SARIF
       run: |
-        # Create SARIF file with basic structure
-        echo '{
+        # First ensure results directory exists
+        mkdir -p ./scan-results
+
+        # Create base SARIF structure
+        cat > ./scan-results/scan.sarif << 'EOF'
+        {
           "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
           "version": "2.1.0",
           "runs": [
@@ -86,40 +95,59 @@ jobs:
               "results": []
             }
           ]
-        }' > ./scan-results/scan.sarif
+        }
+EOF
 
-        # Process the JSON file if it exists
-        if [ -f "./scan-results/results.json" ]; then
-          # Convert file paths to results
-          jq -r '.[] | select(.path != null) | {
-            "ruleId": .path,
-            "message": {
-              "text": "File path: \(.path)"
-            },
-            "locations": [{
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": .path
-                },
-                "region": {
-                  "startLine": 1
+        # Check if results.json exists and has content
+        if [ -s "./scan-results/results.json" ]; then
+          # Extract and format results
+          jq -r '
+          . as $root |
+          {
+            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+            "version": "2.1.0",
+            "runs": [{
+              "tool": {
+                "driver": {
+                  "name": "Falcon Container Security",
+                  "informationUri": "https://www.crowdstrike.com/",
+                  "rules": []
                 }
-              }
+              },
+              "results": [
+                .[] | select(.path != null) | {
+                  "ruleId": .path,
+                  "message": {
+                    "text": "File: \(.path), Size: \(.size), Permissions: \(.permissions)"
+                  },
+                  "locations": [{
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": .path
+                      },
+                      "region": {
+                        "startLine": 1
+                      }
+                    }
+                  }]
+                }
+              ]
             }]
-          }' ./scan-results/results.json > ./scan-results/temp_results.json
-
-          # Update the SARIF file with the results
-          jq --slurpfile results ./scan-results/temp_results.json '.runs[0].results = $results' ./scan-results/scan.sarif > ./scan-results/scan.sarif.tmp
-          mv ./scan-results/scan.sarif.tmp ./scan-results/scan.sarif
+          }' ./scan-results/results.json > ./scan-results/scan.sarif
         else
-          echo "No results.json file found"
+          echo "No results found in results.json"
           exit 1
         fi
 
-    - name: Debug SARIF file
+    - name: Verify SARIF file
       run: |
-        echo "SARIF file contents:"
-        cat ./scan-results/scan.sarif || echo "SARIF file not found"
+        if [ -f "./scan-results/scan.sarif" ]; then
+          echo "SARIF file contents:"
+          cat ./scan-results/scan.sarif
+        else
+          echo "SARIF file not found"
+          exit 1
+        fi
 
     - name: Upload SARIF report
       if: always()
