@@ -110,7 +110,7 @@ jobs:
       uses: github/codeql-action/upload-sarif@v3
       continue-on-error: true  # For debugging
       with:
-        sarif_file: './scan-results/results.sarif'
+        sarif_file: './scan-results/'
         category: 'fcs-scan'
         wait-for-processing: true
             
