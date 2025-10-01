@@ -84,7 +84,7 @@ jobs:
           minimum_score: 7.0
           vuln_fixable_only: true
           report_formats: json,sarif
-          output_path: './vuln-results/'
+          output_path: './vuln-results/results.sarif'
           upload_results: true
           
       - name: Upload SARIF report to GitHub Code scanning
