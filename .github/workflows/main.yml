@@ -68,32 +68,28 @@ jobs:
         report_formats: 'json'
         output_path: './scan-results/results.json'
 
-    - name: Debug JSON file
-      run: |
-        echo "Content of results.json:"
-        cat ./scan-results/results.json || echo "File not found"
-
     - name: Convert JSON to SARIF
       run: |
         mkdir -p ./scan-results
         
         if [ -s "./scan-results/results.json" ]; then
-          jq -r '{
+          jq -n '
+          {
             "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
             "version": "2.1.0",
-            "runs": [{
-              "tool": {
-                "driver": {
-                  "name": "Falcon Container Security",
-                  "informationUri": "https://www.crowdstrike.com/",
-                  "rules": []
-                }
-              },
-              "results": [
-                .[] | select(.path != null) | {
+            "runs": [
+              {
+                "tool": {
+                  "driver": {
+                    "name": "Falcon Container Security",
+                    "informationUri": "https://www.crowdstrike.com/",
+                    "rules": []
+                  }
+                },
+                "results": [inputs | .[] | select(.path != null) | {
                   "ruleId": .path,
                   "message": {
-                    "text": "File: \(.path), Size: \(.size), Permissions: \(.permissions)"
+                    "text": ("File: " + .path + ", Size: " + (.size|tostring) + ", Permissions: " + .permissions)
                   },
                   "locations": [{
                     "physicalLocation": {
@@ -105,10 +101,11 @@ jobs:
                       }
                     }
                   }]
-                }
-              ]
-            }]
-          }' ./scan-results/results.json > ./scan-results/scan.sarif
+                }]
+              }
+            ]
+          }
+          ' --slurpfile input ./scan-results/results.json > ./scan-results/scan.sarif
         else
           echo "No results found in results.json"
           exit 1
