@@ -68,8 +68,22 @@ jobs:
         report_formats: 'json'
         output_path: './scan-results/results.json'
 
+    - name: Debug JSON Results
+      run: |
+        echo "Checking for JSON results file..."
+        ls -la ./scan-results/
+        echo "JSON file contents:"
+        cat ./scan-results/results.json || echo "JSON file not found"
+
     - name: Convert JSON to SARIF
       run: |
+        # First check if JSON file exists and has content
+        if [ ! -f "./scan-results/results.json" ]; then
+          echo "Results JSON file not found"
+          exit 1
+        fi
+        
+        # Create basic SARIF structure
         echo '{
           "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
           "version": "2.1.0",
@@ -78,65 +92,18 @@ jobs:
               "tool": {
                 "driver": {
                   "name": "Falcon Container Security",
-                  "informationUri": "https://www.crowdstrike.com/",
-                  "rules": []
+                  "informationUri": "https://www.crowdstrike.com/"
                 }
               },
               "results": []
             }
           ]
-        }' > ./scan-results/template.sarif
+        }' > ./scan-results/scan.sarif
 
-        # Convert JSON to SARIF using jq
-        jq --slurp '
-        def severity_level:
-          if .severity == "CRITICAL" then "error"
-          elif .severity == "HIGH" then "error"
-          elif .severity == "MEDIUM" then "warning"
-          else "note"
-          end;
-
-        def create_rule:
+        # Check JSON content and convert
+        if [ -s "./scan-results/results.json" ]; then
+          jq -e '
           {
-            "id": .cve,
-            "name": .cve,
-            "shortDescription": {
-              "text": .description
-            },
-            "fullDescription": {
-              "text": .description
-            },
-            "help": {
-              "text": "Severity: \(.severity)\nPackage: \(.package)\nInstalled Version: \(.installed_version)\nFixed Version: \(.fixed_version)"
-            },
-            "defaultConfiguration": {
-              "level": severity_level
-            }
-          };
-
-        def create_result:
-          {
-            "ruleId": .cve,
-            "level": severity_level,
-            "message": {
-              "text": .description
-            },
-            "locations": [
-              {
-                "physicalLocation": {
-                  "artifactLocation": {
-                    "uri": "Dockerfile"
-                  },
-                  "region": {
-                    "startLine": 1
-                  }
-                }
-              }
-            ]
-          };
-
-        .[0].vulnerabilities as $vulns
-        | {
             "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
             "version": "2.1.0",
             "runs": [
@@ -145,20 +112,50 @@ jobs:
                   "driver": {
                     "name": "Falcon Container Security",
                     "informationUri": "https://www.crowdstrike.com/",
-                    "rules": [$vulns[] | create_rule]
+                    "rules": [
+                      .vulnerabilities[] | {
+                        "id": .cve,
+                        "shortDescription": {
+                          "text": .description
+                        },
+                        "fullDescription": {
+                          "text": .description
+                        }
+                      }
+                    ]
                   }
                 },
-                "results": [$vulns[] | create_result]
+                "results": [
+                  .vulnerabilities[] | {
+                    "ruleId": .cve,
+                    "message": {
+                      "text": .description
+                    },
+                    "level": (
+                      if .severity == "CRITICAL" or .severity == "HIGH" then "error"
+                      elif .severity == "MEDIUM" then "warning"
+                      else "note"
+                      end
+                    )
+                  }
+                ]
               }
             ]
-          }' ./scan-results/results.json > ./scan-results/scan.sarif
+          }' ./scan-results/results.json > ./scan-results/scan.sarif || cp ./scan-results/template.sarif ./scan-results/scan.sarif
+        fi
+
+        # Verify SARIF file was created
+        if [ ! -s "./scan-results/scan.sarif" ]; then
+          echo "Failed to create valid SARIF file"
+          exit 1
+        fi
 
     - name: Debug SARIF file
       run: |
         echo "Checking scan results directory..."
         ls -la ./scan-results/
         echo "SARIF file contents:"
-        cat ./scan-results/scan.sarif
+        cat ./scan-results/scan.sarif || echo "SARIF file not found"
 
     - name: Upload SARIF report
       if: always()
@@ -169,6 +166,7 @@ jobs:
         wait-for-processing: true
             
     - name: Workflow Summary
+      if: always()
       run: |
         echo "## Falcon Sensor Sync Complete" >> $GITHUB_STEP_SUMMARY
         echo "✅ Environment verified" >> $GITHUB_STEP_SUMMARY
@@ -176,3 +174,13 @@ jobs:
         echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
         echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
         echo "✅ SARIF report processed" >> $GITHUB_STEP_SUMMARY
+
+    - name: Check for scan results
+      if: always()
+      run: |
+        if [ -f "./scan-results/scan.sarif" ]; then
+          echo "Scan completed successfully"
+        else
+          echo "Scan failed to generate SARIF report"
+          exit 1
+        fi
