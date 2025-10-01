@@ -75,35 +75,10 @@ jobs:
 
     - name: Convert JSON to SARIF
       run: |
-        # First ensure results directory exists
         mkdir -p ./scan-results
-
-        # Create base SARIF structure
-        cat > ./scan-results/scan.sarif << 'EOF'
-        {
-          "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
-          "version": "2.1.0",
-          "runs": [
-            {
-              "tool": {
-                "driver": {
-                  "name": "Falcon Container Security",
-                  "informationUri": "https://www.crowdstrike.com/",
-                  "rules": []
-                }
-              },
-              "results": []
-            }
-          ]
-        }
-EOF
-
-        # Check if results.json exists and has content
+        
         if [ -s "./scan-results/results.json" ]; then
-          # Extract and format results
-          jq -r '
-          . as $root |
-          {
+          jq -r '{
             "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
             "version": "2.1.0",
             "runs": [{
