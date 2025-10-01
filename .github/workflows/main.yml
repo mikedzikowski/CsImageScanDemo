@@ -3,15 +3,11 @@
 name: Falcon Sensor ACR Sync
 
 on:
-  # Triggers on push to main
   push:
     branches: [ "main" ]
-  # Triggers on PR to main
   pull_request:
     branches: [ "main" ]
-  # Manual trigger
   workflow_dispatch:
-  # Runs every hour
   schedule:
     - cron: '0 * * * *'
 
@@ -54,8 +50,6 @@ jobs:
         --type falcon-sensor \
         --copy crmiked.azurecr.io/falcon-sensor
 
-        echo "✅ Sensor processing complete"
-
     - name: Run FCS Image Scan
       id: fcs-scan
       uses: crowdstrike/fcs-action@v2.0.0
@@ -71,15 +65,100 @@ jobs:
         minimum_severity: high
         minimum_score: 7.0
         vuln_fixable_only: true
-        report_formats: 'sarif'
-        output_path: './scan-results/fcs-scan.sarif'
-          
-    - name: Debug Scan Results
+        report_formats: 'json'
+        output_path: './scan-results/results.json'
+
+    - name: Convert JSON to SARIF
+      run: |
+        echo '{
+          "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+          "version": "2.1.0",
+          "runs": [
+            {
+              "tool": {
+                "driver": {
+                  "name": "Falcon Container Security",
+                  "informationUri": "https://www.crowdstrike.com/",
+                  "rules": []
+                }
+              },
+              "results": []
+            }
+          ]
+        }' > ./scan-results/template.sarif
+
+        # Convert JSON to SARIF using jq
+        jq --slurp '
+        def severity_level:
+          if .severity == "CRITICAL" then "error"
+          elif .severity == "HIGH" then "error"
+          elif .severity == "MEDIUM" then "warning"
+          else "note"
+          end;
+
+        def create_rule:
+          {
+            "id": .cve,
+            "name": .cve,
+            "shortDescription": {
+              "text": .description
+            },
+            "fullDescription": {
+              "text": .description
+            },
+            "help": {
+              "text": "Severity: \(.severity)\nPackage: \(.package)\nInstalled Version: \(.installed_version)\nFixed Version: \(.fixed_version)"
+            },
+            "defaultConfiguration": {
+              "level": severity_level
+            }
+          };
+
+        def create_result:
+          {
+            "ruleId": .cve,
+            "level": severity_level,
+            "message": {
+              "text": .description
+            },
+            "locations": [
+              {
+                "physicalLocation": {
+                  "artifactLocation": {
+                    "uri": "Dockerfile"
+                  },
+                  "region": {
+                    "startLine": 1
+                  }
+                }
+              }
+            ]
+          };
+
+        .[0].vulnerabilities as $vulns
+        | {
+            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+            "version": "2.1.0",
+            "runs": [
+              {
+                "tool": {
+                  "driver": {
+                    "name": "Falcon Container Security",
+                    "informationUri": "https://www.crowdstrike.com/",
+                    "rules": [$vulns[] | create_rule]
+                  }
+                },
+                "results": [$vulns[] | create_result]
+              }
+            ]
+          }' ./scan-results/results.json > ./scan-results/scan.sarif
+
+    - name: Debug SARIF file
       run: |
         echo "Checking scan results directory..."
         ls -la ./scan-results/
         echo "SARIF file contents:"
-        cat ./scan-results/fcs-scan.sarif || echo "SARIF file not found"
+        cat ./scan-results/scan.sarif
 
     - name: Upload SARIF report
       if: always()
