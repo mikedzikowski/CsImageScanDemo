@@ -24,12 +24,6 @@ jobs:
       contents: read
       security-events: write
 
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'python' ]  # Modify this based on your project languages
-        # Available options: cpp, csharp, go, java, javascript, python, ruby
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -88,8 +82,8 @@ jobs:
         minimum_score: 7.0
         vuln_fixable_only: true
         path: './cloudformation'
-        report_formats: 'sarif'
-        output_path: './scan-results/results.sarif'
+        report_formats: 'json'
+        output_path: './scan-results/results.json'
         upload_results: true
           
     - name: Upload SARIF report to GitHub Code scanning
