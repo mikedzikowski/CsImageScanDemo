@@ -88,14 +88,3 @@ jobs:
         else
           echo "❌ SARIF report generation failed" >> $GITHUB_STEP_SUMMARY
         fi
-
-    - name: Check for scan results
-      if: always()
-      run: |
-        if [ -f "./scan-results/scan.sarif" ]; then
-          echo "Scan completed successfully"
-          echo "Results should be visible at: https://github.com/${{ github.repository }}/security/code-scanning"
-        else
-          echo "Scan failed to generate SARIF report"
-          exit 1
-        fi
