@@ -57,15 +57,15 @@ jobs:
         docker build -t ubuntu2scandemo:latest .
         
         # Get the full image ID including sha256 prefix
-        FULL_ID=$(docker inspect --format='{{.Id}}' ubuntu2scandemo:latest)
+        FULL_ID=$(docker inspect --format='{{.Id}}' cryptominertest:latest)
         echo "Full Image ID: $FULL_ID"
         echo "image_id=$FULL_ID" >> $GITHUB_OUTPUT
         
         # Tag the image with localhost registry
-        docker tag ubuntu2scandemo:latest localhost/ubuntu2scandemo:latest
+        docker tag ubuntu2scandemo:latest localhost/cryptominertest:latest
         
         echo "Tagged image details:"
-        docker images --digests localhost/ubuntu2scandemo
+        docker images --digests localhost/cryptominertest
 
     - name: Debug Image Info
       run: |
