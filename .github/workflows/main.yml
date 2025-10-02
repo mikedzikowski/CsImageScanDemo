@@ -82,16 +82,13 @@ jobs:
         falcon_region: 'us-1'
         scan_type: image
         image: ${{ steps.build.outputs.image_id }}
-        vulnerability_only: true
-        minimum_severity: high
-        minimum_score: 7.0
         vuln_fixable_only: true
         report_formats: json,sarif
         output_path: './vuln-results/results.json'
         socket: 'unix:///var/run/docker.sock'
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-    
+
     - name: Upload SARIF report
       if: always()
       uses: github/codeql-action/upload-sarif@v3
@@ -99,7 +96,7 @@ jobs:
         sarif_file: './scan-results'
         category: 'container-scan'
         wait-for-processing: true
-            
+
     - name: Workflow Summary
       if: always()
       run: |
