@@ -18,7 +18,6 @@ jobs:
       actions: read
       contents: read
       security-events: write
-      packages: write
 
     steps:
     - name: Checkout repository
@@ -51,26 +50,28 @@ jobs:
         --type falcon-sensor \
         --copy crmiked.azurecr.io/falcon-sensor
 
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Build and Push Docker Image
+    - name: Build Docker Image
       id: build
       run: |
         # Build the image
-        docker build -t ghcr.io/${{ github.repository_owner }}/ubuntu2scandemo:latest .
+        docker build -t ubuntu2scandemo:latest .
         
-        # Push to GitHub Container Registry
-        docker push ghcr.io/${{ github.repository_owner }}/ubuntu2scandemo:latest
+        # Get the image digest
+        DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ubuntu2scandemo:latest || docker images --no-trunc --quiet ubuntu2scandemo:latest)
+        echo "Image Digest: $DIGEST"
+        echo "digest=$DIGEST" >> $GITHUB_OUTPUT
         
-        # Get the image ID and save it
-        IMAGE_ID=$(docker images ghcr.io/${{ github.repository_owner }}/ubuntu2scandemo:latest --format "{{.ID}}")
-        echo "Image ID: $IMAGE_ID"
-        echo "image_id=ghcr.io/${{ github.repository_owner }}/ubuntu2scandemo:latest" >> $GITHUB_OUTPUT
+        # Also get the full image ID
+        FULL_IMAGE_ID=$(docker inspect --format='{{.Id}}' ubuntu2scandemo:latest)
+        echo "Full Image ID: $FULL_IMAGE_ID"
+        echo "image_id=$FULL_IMAGE_ID" >> $GITHUB_OUTPUT
+
+    - name: Debug Image Info
+      run: |
+        echo "Listing all images:"
+        docker images
+        echo "Detailed image inspect:"
+        docker inspect ubuntu2scandemo:latest
 
     - name: Scan Image for Vulnerabilities Only
       uses: crowdstrike/fcs-action@v2.0.2
@@ -78,7 +79,7 @@ jobs:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
         scan_type: image
-        image: ${{ steps.build.outputs.image_id }}
+        image: "ubuntu2scandemo:latest"
         vulnerability_only: true
         minimum_severity: high
         minimum_score: 7.0
@@ -103,7 +104,8 @@ jobs:
         echo "✅ Environment verified" >> $GITHUB_STEP_SUMMARY
         echo "✅ ACR login successful" >> $GITHUB_STEP_SUMMARY
         echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Docker image built and pushed: ${{ steps.build.outputs.image_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Docker image built with ID: ${{ steps.build.outputs.image_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Docker image digest: ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
         echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
         if [ -f "./scan-results/scan.sarif" ]; then
           echo "✅ SARIF report generated" >> $GITHUB_STEP_SUMMARY
