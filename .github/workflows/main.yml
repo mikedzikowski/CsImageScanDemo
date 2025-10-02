@@ -70,7 +70,7 @@ jobs:
       if: always()
       uses: github/codeql-action/upload-sarif@v3
       with:
-        sarif_file: './vuln-results/'
+        sarif_file: './vuln-results'
         category: 'container-scan'
         wait-for-processing: true
             
