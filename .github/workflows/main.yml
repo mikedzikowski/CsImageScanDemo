@@ -50,6 +50,24 @@ jobs:
         --type falcon-sensor \
         --copy crmiked.azurecr.io/falcon-sensor
 
+    - name: Run FCS IaC Scan
+      uses: crowdstrike/fcs-action@v2.0.2
+      id: fcs
+      with:
+        falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
+        falcon_region: 'eu-1'
+        path: './terraform'
+        report_formats: 'sarif'
+        output_path: './scan-results'
+      env:
+        FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
+
+    - name: Upload SARIF report to GitHub Code scanning
+      if: always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ./scan-results
+      
     - name: Build Docker Image
       id: build
       run: |
@@ -81,11 +99,11 @@ jobs:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
         scan_type: image
-        image: ${{ steps.build.outputs.image_id }}
-        #image: nginx:latest
+        #image: ${{ steps.build.outputs.image_id }}
+        image: nginx:latest
         report_formats: json,sarif
         output_path: './vuln-results/results.json'
-        socket: 'unix:///var/run/docker.sock'
+        #socket: 'unix:///var/run/docker.sock'
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
