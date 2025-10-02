@@ -83,7 +83,6 @@ jobs:
         scan_type: image
         #image: ${{ steps.build.outputs.image_id }}
         image: nginx:latest
-        vuln_fixable_only: true
         report_formats: json,sarif
         output_path: './vuln-results/results.json'
         #socket: 'unix:///var/run/docker.sock'
@@ -95,7 +94,7 @@ jobs:
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: './scan-results'
-        category: 'container-scan'
+        category: 'test'
         wait-for-processing: true
 
     - name: Workflow Summary
@@ -107,13 +106,7 @@ jobs:
         echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
         echo "✅ Docker image built with ID: ${{ steps.build.outputs.image_id }}" >> $GITHUB_STEP_SUMMARY
         echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
-        if [ -f "./scan-results/scan.sarif" ]; then
-          echo "✅ SARIF report generated" >> $GITHUB_STEP_SUMMARY
-          echo "SARIF file size: $(stat -f%z ./scan-results/scan.sarif 2>/dev/null || stat -c%s ./scan-results/scan.sarif 2>/dev/null) bytes" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ SARIF report generation failed" >> $GITHUB_STEP_SUMMARY
-        fi
-
+  
     - name: Check for scan results
       if: always()
       run: |
