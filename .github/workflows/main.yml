@@ -54,18 +54,18 @@ jobs:
       id: build
       run: |
         # Build the image
-        docker build -t cryptominertest:latest .
+        docker build -t vulnapp:latest .
         
         # Get the full image ID including sha256 prefix
-        FULL_ID=$(docker inspect --format='{{.Id}}' cryptominertest:latest)
+        FULL_ID=$(docker inspect --format='{{.Id}}' vulnapp:latest)
         echo "Full Image ID: $FULL_ID"
         echo "image_id=$FULL_ID" >> $GITHUB_OUTPUT
         
         # Tag the image with localhost registry
-        docker tag cryptominertest:latest localhost/cryptominertest:latest
+        docker tag vulnapp:latest localhost/vulnapp:latest
         
         echo "Tagged image details:"
-        docker images --digests localhost/cryptominertest
+        docker images --digests localhost/vulnapp
 
     - name: Debug Image Info
       run: |
@@ -73,7 +73,7 @@ jobs:
         docker images --digests
         echo "Image to be scanned: ${{ steps.build.outputs.image_id }}"
         echo "Detailed image inspect:"
-        docker inspect localhost/cryptominertest:latest
+        docker inspect localhost/vulnapp:latest
 
     - name: Scan Image for Vulnerabilities Only
       uses: crowdstrike/fcs-action@v2.0.2
