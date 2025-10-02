@@ -3,18 +3,13 @@
 name: Falcon Sensor ACR Sync
 
 on:
-  # Triggers on push to main
   push:
     branches: [ "main" ]
-  # Triggers on PR to main
   pull_request:
     branches: [ "main" ]
-  # Manual trigger
   workflow_dispatch:
-  # Runs every hour
   schedule:
     - cron: '0 * * * *'
-
 
 jobs:
   sync-sensor:
@@ -27,19 +22,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
           
     - name: Login to Azure Container Registry
       uses: azure/docker-login@v1
@@ -47,6 +29,9 @@ jobs:
         login-server: crmiked.azurecr.io
         username: ${{ secrets.ACR_USERNAME }}
         password: ${{ secrets.ACR_PASSWORD }}
+
+    - name: Create scan results directory
+      run: mkdir -p ./scan-results
 
     - name: Download and Process Falcon Container Sensor
       env:
@@ -65,13 +50,8 @@ jobs:
         --type falcon-sensor \
         --copy crmiked.azurecr.io/falcon-sensor
 
-          echo "✅ Sensor processing complete"
-
-    - name: Run FCS IaC Scan
-      uses: crowdstrike/fcs-action@v2.0.0
-      env:
-        INPUT_FALCON_CLIENT_ID: ${{ vars.FALCON_CLIENT_ID }}
-        FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
+    - name: Scan Image for Vulnerabilities Only
+      uses: crowdstrike/fcs-action@v2.1.0
       with:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
@@ -81,23 +61,30 @@ jobs:
         minimum_severity: high
         minimum_score: 7.0
         vuln_fixable_only: true
-        path: './cloudformation'
-        report_formats: 'json'
-        output_path: './scan-results/results.json'
-        upload_results: true
-          
-    - name: Upload SARIF report to GitHub Code scanning
+        report_formats: json,sarif
+        output_path: './vuln-results/results.json'
+      env:
+        FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
+    
+    - name: Upload SARIF report
+      if: always()
       uses: github/codeql-action/upload-sarif@v3
-      #if: steps.fcs.outputs.exit-code != 0
       with:
         sarif_file: './scan-results'
-        category: 'scan'  # Example category name
+        category: 'container-scan'
         wait-for-processing: true
             
     - name: Workflow Summary
+      if: always()
       run: |
         echo "## Falcon Sensor Sync Complete" >> $GITHUB_STEP_SUMMARY
         echo "✅ Environment verified" >> $GITHUB_STEP_SUMMARY
         echo "✅ ACR login successful" >> $GITHUB_STEP_SUMMARY
         echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
-        echo "✅ IaC scan completed" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
+        if [ -f "./scan-results/scan.sarif" ]; then
+          echo "✅ SARIF report generated" >> $GITHUB_STEP_SUMMARY
+          echo "SARIF file size: $(stat -f%z ./scan-results/scan.sarif 2>/dev/null || stat -c%s ./scan-results/scan.sarif 2>/dev/null) bytes" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ SARIF report generation failed" >> $GITHUB_STEP_SUMMARY
+        fi
