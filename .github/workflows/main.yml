@@ -81,7 +81,7 @@ jobs:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
         scan_type: image
-        image: ${{ steps.build.outputs.FULL_ID }}
+        image: ${{ steps.build.outputs.image_id }}
         vulnerability_only: true
         minimum_severity: high
         minimum_score: 7.0
