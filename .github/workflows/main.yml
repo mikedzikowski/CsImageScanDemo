@@ -74,7 +74,7 @@ jobs:
         vuln_fixable_only: true
         report_formats: json,sarif
         output_path: './vuln-results/results.json'
-        docker_host: 'unix:///var/run/docker.sock'
+        socket: 'unix:///var/run/docker.sock'
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
     
