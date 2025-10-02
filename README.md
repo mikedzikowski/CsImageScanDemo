@@ -1,7 +1,9 @@
 ```markdown
 # 🦅 CrowdStrike Falcon Container Sensor Automation
 
-Simple GitHub Action to automate downloading the CrowdStrike Falcon Container Sensor and pushing it to Azure Container Registry (ACR).
+Simple GitHub Action to automate downloading the CrowdStrike Falcon Container Sensor and pushing it to Azure Container Registry (ACR). 
+
+The workflow also demostrates a simple image scan using the FCS CLI. 
 
 ## Setup
 
