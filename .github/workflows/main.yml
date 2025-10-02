@@ -61,8 +61,8 @@ jobs:
         echo "Full Image ID: $FULL_ID"
         echo "image_id=$FULL_ID" >> $GITHUB_OUTPUT
         
-        # Tag the image with its digest
-        docker tag ubuntu2scandemo:latest localhost/ubuntu2scandemo@$FULL_ID
+        # Tag the image with localhost registry
+        docker tag ubuntu2scandemo:latest localhost/ubuntu2scandemo:latest
         
         echo "Tagged image details:"
         docker images --digests localhost/ubuntu2scandemo
@@ -73,7 +73,7 @@ jobs:
         docker images --digests
         echo "Image to be scanned: ${{ steps.build.outputs.image_id }}"
         echo "Detailed image inspect:"
-        docker inspect ubuntu2scandemo:latest
+        docker inspect localhost/ubuntu2scandemo:latest
 
     - name: Scan Image for Vulnerabilities Only
       uses: crowdstrike/fcs-action@v2.0.2
@@ -114,4 +114,15 @@ jobs:
           echo "SARIF file size: $(stat -f%z ./scan-results/scan.sarif 2>/dev/null || stat -c%s ./scan-results/scan.sarif 2>/dev/null) bytes" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ SARIF report generation failed" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Check for scan results
+      if: always()
+      run: |
+        if [ -f "./vuln-results/results.json" ]; then
+          echo "Scan results found:"
+          cat "./vuln-results/results.json"
+        else
+          echo "No scan results found"
+          exit 1
         fi
