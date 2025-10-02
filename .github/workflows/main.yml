@@ -81,14 +81,14 @@ jobs:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
         scan_type: image
-        image: "localhost/ubuntu2scandemo:latest"
+        image: ${{ steps.build.outputs.FULL_ID }}
         vulnerability_only: true
         minimum_severity: high
         minimum_score: 7.0
         vuln_fixable_only: true
         report_formats: json,sarif
         output_path: './vuln-results/results.json'
-        docker_host: 'unix:///var/run/docker.sock'
+        socket: 'unix:///var/run/docker.sock'
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
     
