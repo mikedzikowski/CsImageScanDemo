@@ -1,155 +1,118 @@
-```markdown
-# 🦅 CrowdStrike Falcon Container Sensor Automation
+# 🦅 Falcon Sensor Automation & FCS CLI Image Scan
+![CrowdStrike](https://img.shields.io/badge/CrowdStrike-FF0000?style=for-the-badge&logo=crowdstrike&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-Simple GitHub Action to automate downloading the CrowdStrike Falcon Container Sensor and pushing it to Azure Container Registry (ACR). 
+## 📋 Overview
+This workflow automates the deployment of CrowdStrike Falcon Container Sensor and performs security scans using FCS CLI.
 
-The workflow also demostrates a simple image scan using the FCS CLI. 
+## 📝 Prerequisites
 
-## Setup
+### Required Components
+- Azure Container Registry
+- CrowdStrike Falcon API Credentials
+- GitHub Repository
+- Azure CLI installed (for generating credentials)
+
+### Azure Configuration
+
+1. **Create Azure Service Principal and get credentials:**
+```bash
+# Login to Azure
+az login
+
+# Create Service Principal with ACR push role
+az ad sp create-for-rbac \
+  --name "GitHub-ACR-Access" \
+  --role AcrPush \
+  --scopes /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.ContainerRegistry/registries/<youracr> \
+  --sdk-auth
+```
+
+Example output:
+```json
+{
+  "clientId": "xxx",
+  "clientSecret": "xxx",
+  "subscriptionId": "xxx",
+  "tenantId": "xxx",
+  "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
+  "resourceManagerEndpointUrl": "https://management.azure.com/",
+  "activeDirectoryGraphResourceId": "https://graph.windows.net/",
+  "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
+  "galleryEndpointUrl": "https://gallery.azure.com/",
+  "managementEndpointUrl": "https://management.core.windows.net/"
+}
+```
+
+2. **Get ACR credentials:**
+```bash
+# Get ACR admin credentials
+az acr credential show -n <youracr>
+```
 
 ### Required Permissions
-1. CrowdStrike API Client
-   ```yaml
-   - Falcon Container Image Download: Read
-   - Falcon Container Image: Write
-   - Falcon Container Registry: Write
-   ```
 
-2. Azure Container Registry Access
-   ```yaml
-   - Registry Name: <registry>.azurecr.io
-   - Admin Access Enabled
-   ```
+#### CrowdStrike API Client
+- Falcon Container Image Download: Read
+- Falcon Container Image: Write
+- Falcon Container Registry: Write
+
+#### Azure Container Registry Access
+- Registry Name: `<youracr>.azurecr.io`
+- Admin Access Enabled
+- Service Principal: AcrPush role
 
 ### GitHub Configuration
-Add to repository secrets:
+
+#### Repository Secrets
 ```yaml
 ACR_USERNAME: Azure Container Registry username
 ACR_PASSWORD: Azure Container Registry password
 FALCON_CLIENT_SECRET: CrowdStrike API secret
+AZURE_CREDENTIALS: Entire JSON output from az ad sp create-for-rbac
 ```
 
-Add to repository variables:
+#### Repository Variables
 ```yaml
 FALCON_CLIENT_ID: CrowdStrike API client ID
 ```
 
-## Workflow File
+## 🔄 Trigger Events
+- Push to `main` branch
+- Pull requests to `main` branch
+- Manual workflow dispatch
+- Hourly schedule (`0 * * * *`)
 
-### Location
-Save as `.github/workflows/falcon-sensor.yml`
+## 🛠️ Features
+- ✨ Automated Falcon Container Sensor deployment
+- 🔒 Azure Container Registry integration
+- 🔍 FCS IaC scanning
+- 📊 Container vulnerability scanning
+- 📝 SARIF report generation
+- 🔄 GitHub Code Scanning integration
 
-### Structure
-```yaml
-name: CI
+## 📦 Workflow Steps
+1. 🔵 **Repository Checkout**
+2. 🔐 **ACR Authentication**
+3. 📥 **Falcon Container Sensor Download**
+4. 🔍 **FCS IaC Scan**
+5. 🏗️ **Docker Image Build**
+6. 🔬 **Vulnerability Scan**
+7. 📊 **Results Processing**
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  workflow_dispatch:
-  schedule:
-    - cron: '0 * * * *'  # Runs hourly
+## 📈 Outputs
+- SARIF reports for security scanning
+- JSON vulnerability reports
+- Workflow summary with execution status
+- Scan results verification
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Login to ACR
-        uses: azure/docker-login@v1
-      - name: Download and Process Falcon Container Sensor
-        # Downloads and pushes sensor
-      - name: Run FCS IaC Scan
-        uses: crowdstrike/fcs-action@v2.0.0
-```
+## ⚠️ Important Notes
+- Requires appropriate permissions for GitHub Actions
+- Docker socket access needed for container scanning
+- Azure Container Registry credentials must be valid
+- CrowdStrike API credentials must be properly configured
 
-### Key Components
-1. **Triggers** (`on:`)
-   ```yaml
-   push: main branch
-   pull_request: main branch
-   workflow_dispatch: manual run
-   schedule: hourly via cron
-   ```
-
-2. **ACR Login** (`azure/docker-login@v1`)
-   ```yaml
-   login-server: <registry>.azurecr.io
-   username: ${{ secrets.ACR_USERNAME }}
-   password: ${{ secrets.ACR_PASSWORD }}
-   ```
-
-3. **Sensor Download**
-   ```yaml
-   # Script parameters
-   --client-id: Falcon API Client ID
-   --client-secret: Falcon API Secret
-   --region: us-1
-   --type: falcon-sensor
-   --copy: <registry>.azurecr.io
-   ```
-
-### Customization
-1. Update Registry Name
-   ```yaml
-   login-server: your-registry.azurecr.io
-   ```
-
-2. Change Schedule
-   ```yaml
-   # Examples
-   - cron: '0 * * * *'     # Every hour
-   - cron: '0 */2 * * *'   # Every 2 hours
-   - cron: '0 0 * * *'     # Daily at midnight
-   ```
-
-3. Modify Region
-   ```yaml
-   --region: us-1  # Change to your Falcon cloud region
-   ```
-
-## Usage
-
-### Image Location
-```bash
-<registry>.azurecr.io/falcon-sensor:latest
-```
-
-### Verify Deployment
-```bash
-# Login to ACR
-az acr login -n <registry-name>
-
-# Check image
-docker images | grep falcon-sensor
-```
-
-### Manual Trigger
-1. Go to Actions tab
-2. Select workflow
-3. Click "Run workflow"
-
-## Troubleshooting
-
-### Common Issues
-1. 🔑 Authentication Failures
-   ```yaml
-   - Check secrets are properly set
-   - Verify API client permissions
-   - Confirm ACR credentials
-   ```
-
-2. 🏷️ Image Push Errors
-   ```yaml
-   - Verify ACR exists and is accessible
-   - Check network connectivity
-   - Confirm storage quota
-   ```
-
-## Support
-- 🔧 Issues: Open in this repo
-- 📚 Docs: [CrowdStrike Container Security](https://falcon.crowdstrike.com/documentation/146/falcon-container-security)
-- 🐳 ACR: [Azure Container Registry](https://learn.microsoft.com/en-us/azure/container-registry/)
-```
+## 🔗 Related Links
+- [CrowdStrike FCS Action](https://github.com/crowdstrike/fcs-action)
+- [Falcon Scripts Repository](https://github.com/CrowdStrike/falcon-scripts)
