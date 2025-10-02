@@ -1,6 +1,6 @@
 # .github/workflows/falcon-sensor.yml
 
-name: Falcon Sensor ACR Sync
+name: Falcon Sensor Automation and FCS CLI Image Scan
 
 on:
   push:
@@ -101,7 +101,7 @@ jobs:
         falcon_region: 'us-1'
         scan_type: image
         #image: ${{ steps.build.outputs.image_id }}
-        image: nginx:latest
+        image: alpine:latest
         report_formats: json,sarif
         output_path: './vuln-results/results.json'
         #socket: 'unix:///var/run/docker.sock'
