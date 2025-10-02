@@ -51,7 +51,7 @@ jobs:
         --copy crmiked.azurecr.io/falcon-sensor
 
     - name: Scan Image for Vulnerabilities Only
-      uses: crowdstrike/fcs-action@v2.0.2
+      uses: crowdstrike/fcs-action@v2.1.0
       with:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
