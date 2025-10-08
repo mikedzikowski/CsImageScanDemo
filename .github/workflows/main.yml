@@ -69,7 +69,6 @@ jobs:
           docker images --digests localhost/vulnapp
 
       - name: Debug Image Info
-        if: always()
         run: |
           echo "Listing all images:"
           docker images --digests
@@ -78,7 +77,6 @@ jobs:
           docker inspect localhost/vulnapp:latest
 
       - name: Scan Image for Vulnerabilities Only
-        if: always()
         uses: crowdstrike/fcs-action@v2.0.2
         with:
           falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
@@ -103,7 +101,6 @@ jobs:
       #     wait-for-processing: true
 
       - name: Workflow Summary
-        if: always()
         run: |
           echo "## Falcon Sensor Sync Complete" >> $GITHUB_STEP_SUMMARY
           echo "✅ Environment verified" >> $GITHUB_STEP_SUMMARY
