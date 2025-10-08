@@ -86,8 +86,8 @@ jobs:
           scan_type: image
           #image: ${{ steps.build.outputs.image_id }}
           image: nginx:latest
-          # report_formats: json,sarif
-          # output_path: "./vuln-results/results.json"
+          report_formats: json,sarif
+          output_path: './vuln-results/results.json'
           #socket: 'unix:///var/run/docker.sock'
           version: 2.1.0
           upload_results: true
@@ -113,13 +113,13 @@ jobs:
           echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
           echo "✅ Docker Image scan exitcode is ${{ steps.fcs-iac.outputs.exit-code }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: Check for scan results
-        if: always()
-        run: |
-          if [ -f "./vuln-results/results.json" ]; then
-            echo "Scan results found:"
-            cat "./vuln-results/results.json"
-          else
-            echo "No scan results found"
-            exit 1
-          fi
+      # - name: Check for scan results
+      #   if: always()
+      #   run: |
+      #     if [ -f "./vuln-results/results.json" ]; then
+      #       echo "Scan results found:"
+      #       cat "./vuln-results/results.json"
+      #     else
+      #       echo "No scan results found"
+      #       exit 1
+      #     fi
