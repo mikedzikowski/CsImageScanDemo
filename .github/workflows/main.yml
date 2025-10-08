@@ -1,3 +1,5 @@
+# .github/workflows/falcon-sensor.yml
+
 name: Falcon Sensor Automation and FCS CLI Image Scan
 
 on:
@@ -20,25 +22,18 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      id: checkout
-    - run: echo ${{steps.checkout.outputs.exit-code}}
-
+          
     - name: Login to Azure Container Registry
       uses: azure/docker-login@v1
-      id: acr-login
       with:
         login-server: crmiked.azurecr.io
         username: ${{ secrets.ACR_USERNAME }}
         password: ${{ secrets.ACR_PASSWORD }}
-    - run: echo ${{steps.acr-login.outputs.exit-code}}
 
     - name: Create scan results directory
-      id: create-dir
       run: mkdir -p ./scan-results
-    - run: echo ${{steps.create-dir.outputs.exit-code}}
 
     - name: Download and Process Falcon Container Sensor
-      id: sensor-download
       env:
         FCSCLIENTID: ${{ vars.FALCON_CLIENT_ID }}
         FSCSECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
@@ -46,6 +41,7 @@ jobs:
         echo "⬇️ Downloading Falcon Container Sensor pull script..."
         curl -sSL -o falcon-container-sensor-pull.sh https://github.com/CrowdStrike/falcon-scripts/releases/latest/download/falcon-container-sensor-pull.sh
         chmod 777 ./falcon-container-sensor-pull.sh
+
         echo "🔄 Copying sensor to ACR..."
         ./falcon-container-sensor-pull.sh \
         --client-id "$FCSCLIENTID" \
@@ -53,7 +49,6 @@ jobs:
         --region us-1 \
         --type falcon-sensor \
         --copy crmiked.azurecr.io/falcon-sensor
-    - run: echo ${{steps.sensor-download.outputs.exit-code}}
 
     - name: Run FCS IaC Scan
       uses: crowdstrike/fcs-action@v2.0.2
@@ -68,7 +63,6 @@ jobs:
         upload_results: true
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-    - run: echo ${{steps.fcs.outputs.exit-code}}
     
     - name: Run FCS Dockerfile Scan
       id: fcs-iac
@@ -76,22 +70,20 @@ jobs:
       with:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
-        path: './Dockerfile'
-        timeout: '600'
+        path:             './Dockerfile'
+        timeout:          '600'
         output_path: './scan-results'
         version: 2.1.0
-        fail_on: 'critical=0,high=5,medium=10,informational=0'
+        fail_on:          'critical=0,high=5,medium=10,informational=0'
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-    - run: echo ${{steps.fcs-iac.outputs.exit-code}}
+      run: echo ${{steps.fcs-iac.outputs.exit-code}}
 
     - name: Upload SARIF report to GitHub Code scanning
-      if: steps.fcs-iac.outputs.exit-code != 0
-      id: upload-sarif
+      if: steps.fcs.outputs.exit-code = 0
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: ./scan-results
-    - run: echo ${{steps.upload-sarif.outputs.exit-code}}
       
     - name: Build Docker Image
       id: build
@@ -109,47 +101,41 @@ jobs:
         
         echo "Tagged image details:"
         docker images --digests localhost/vulnapp
-    - run: echo ${{steps.build.outputs.exit-code}}
 
     - name: Debug Image Info
-      id: debug-image
       run: |
         echo "Listing all images:"
         docker images --digests
         echo "Image to be scanned: ${{ steps.build.outputs.image_id }}"
         echo "Detailed image inspect:"
         docker inspect localhost/vulnapp:latest
-    - run: echo ${{steps.debug-image.outputs.exit-code}}
 
     - name: Scan Image for Vulnerabilities Only
-      id: vuln-scan
       uses: crowdstrike/fcs-action@v2.0.2
       with:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
         scan_type: image
+        #image: ${{ steps.build.outputs.image_id }}
         image: alpine:latest
         report_formats: json,sarif
         output_path: './vuln-results/results.json'
+        #socket: 'unix:///var/run/docker.sock'
         version: 2.1.0
         upload_results: true
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-    - run: echo ${{steps.vuln-scan.outputs.exit-code}}
 
     - name: Upload SARIF report
       if: always()
-      id: upload-sarif-vuln
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: './vuln-results'
         category: 'container-scan'
         wait-for-processing: true
-    - run: echo ${{steps.upload-sarif-vuln.outputs.exit-code}}
 
     - name: Workflow Summary
       if: always()
-      id: summary
       run: |
         echo "## Falcon Sensor Sync Complete" >> $GITHUB_STEP_SUMMARY
         echo "✅ Environment verified" >> $GITHUB_STEP_SUMMARY
@@ -157,11 +143,9 @@ jobs:
         echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
         echo "✅ Docker image built with ID: ${{ steps.build.outputs.image_id }}" >> $GITHUB_STEP_SUMMARY
         echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
-    - run: echo ${{steps.summary.outputs.exit-code}}
   
     - name: Check for scan results
       if: always()
-      id: check-results
       run: |
         if [ -f "./vuln-results/results.json" ]; then
           echo "Scan results found:"
@@ -170,4 +154,3 @@ jobs:
           echo "No scan results found"
           exit 1
         fi
-    - run: echo ${{steps.check-results.outputs.exit-code}}
