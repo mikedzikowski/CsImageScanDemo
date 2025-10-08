@@ -145,6 +145,7 @@ jobs:
           echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
           echo "✅ Docker image built with ID: ${{ steps.build.outputs.image_id }}" >> $GITHUB_STEP_SUMMARY
           echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Docker Image scan exitcode is ${{ steps.fcs-iac.outputs.exit-code }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Check for scan results
         if: steps.fcs-iac.outputs.exit-code == 0
