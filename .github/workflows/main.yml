@@ -86,8 +86,8 @@ jobs:
           scan_type: image
           #image: ${{ steps.build.outputs.image_id }}
           image: nginx:latest
-          report_formats: json,sarif
-          output_path: "./vuln-results/results.json"
+          # report_formats: json,sarif
+          # output_path: "./vuln-results/results.json"
           #socket: 'unix:///var/run/docker.sock'
           version: 2.1.0
           upload_results: true
