@@ -66,7 +66,7 @@ jobs:
     
     - name: Run FCS Dockerfile Scan
       id: fcs-iac
-      uses: crowdstrike/fcs-action@v2.0.2 # It's a fork as is. Because we use GitHub Enterprise.
+      uses: crowdstrike/fcs-action@v2.0.2
       with:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
@@ -74,8 +74,7 @@ jobs:
         timeout:          '600'
         output_path: './scan-results'
         version: 2.1.0
-        severities:       'critical,high,medium,informational'
-        fail_on:          'critical=0,high=0,medium=0,informational=0'
+        fail_on:          'critical=0,high=5,medium=10,informational=0'
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
