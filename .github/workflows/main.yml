@@ -79,12 +79,13 @@ jobs:
           FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
       - name: Upload SARIF report to GitHub Code scanning
-        if: steps.fcs.outputs.exit-code == 0
+        if: steps.fcs-iac.outputs.exit-code == 0
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ./scan-results
 
       - name: Build Docker Image
+        if: steps.fcs-iac.outputs.exit-code == 0
         id: build
         run: |
           # Build the image
@@ -102,6 +103,7 @@ jobs:
           docker images --digests localhost/vulnapp
 
       - name: Debug Image Info
+        if: steps.fcs-iac.outputs.exit-code == 0
         run: |
           echo "Listing all images:"
           docker images --digests
@@ -110,6 +112,7 @@ jobs:
           docker inspect localhost/vulnapp:latest
 
       - name: Scan Image for Vulnerabilities Only
+        if: steps.fcs-iac.outputs.exit-code == 0
         uses: crowdstrike/fcs-action@v2.0.2
         with:
           falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
@@ -126,7 +129,7 @@ jobs:
           FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
       - name: Upload SARIF report
-        if: always()
+        if: steps.fcs-iac.outputs.exit-code == 0
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: "./vuln-results"
