@@ -63,6 +63,21 @@ jobs:
         upload_results: true
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
+    
+    - name: Run FCS Dockerfile Scan
+      id: fcs-iac
+      uses: crowdstrike/fcs-action@v2.0.2 # It's a fork as is. Because we use GitHub Enterprise.
+      with:
+        falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
+        falcon_region: 'us-1'
+        path:             './Dockerfile'
+        timeout:          '600'
+        report_formats:   'sarif'
+        output_path:      './'
+        severities:       'high,medium'
+        fail_on:          'critical=1,high=1,medium=1,informational=1'
+      env:
+        FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
     - name: Upload SARIF report to GitHub Code scanning
       if: always()
