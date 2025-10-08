@@ -50,33 +50,6 @@ jobs:
           --type falcon-sensor \
           --copy crmiked.azurecr.io/falcon-sensor
 
-      - name: Run FCS IaC Scan
-        uses: crowdstrike/fcs-action@v2.0.2
-        id: fcs
-        with:
-          falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
-          falcon_region: "us-1"
-          path: "./terraform"
-          report_formats: "sarif"
-          output_path: "./scan-results"
-          version: 2.1.0
-          upload_results: true
-        env:
-          FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-
-      - name: Run FCS Dockerfile Scan
-        id: fcs-iac
-        uses: crowdstrike/fcs-action@v2.0.2
-        with:
-          falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
-          falcon_region: "us-1"
-          path: "./Dockerfile"
-          timeout: "600"
-          output_path: "./scan-results"
-          version: 2.1.0
-        env:
-          FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-
       - name: Build Docker Image
         if: always()
         id: build
