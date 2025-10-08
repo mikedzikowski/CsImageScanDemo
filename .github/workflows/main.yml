@@ -77,6 +77,7 @@ jobs:
           docker inspect localhost/vulnapp:latest
 
       - name: Scan Image for Vulnerabilities Only
+        id: image
         uses: crowdstrike/fcs-action@v2.0.2
         with:
           falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
@@ -101,6 +102,7 @@ jobs:
       #     wait-for-processing: true
 
       - name: Workflow Summary
+        if: steps.image.outputs.exit-code != 0
         run: |
           echo "## Falcon Sensor Sync Complete" >> $GITHUB_STEP_SUMMARY
           echo "✅ Environment verified" >> $GITHUB_STEP_SUMMARY
@@ -110,13 +112,13 @@ jobs:
           echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
           echo "✅ Docker Image scan exitcode is ${{ steps.fcs-iac.outputs.exit-code }}" >> $GITHUB_STEP_SUMMARY
 
-      # - name: Check for scan results
-      #   if: always()
-      #   run: |
-      #     if [ -f "./vuln-results/results.json" ]; then
-      #       echo "Scan results found:"
-      #       cat "./vuln-results/results.json"
-      #     else
-      #       echo "No scan results found"
-      #       exit 1
-      #     fi
+      - name: Check for scan results
+        if: steps.image.outputs.exit-code != 0
+        run: |
+          if [ -f "./vuln-results/results.json" ]; then
+            echo "Scan results found:"
+            cat "./vuln-results/results.json"
+          else
+            echo "No scan results found"
+            exit 1
+          fi
