@@ -147,7 +147,7 @@ jobs:
           echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
 
       - name: Check for scan results
-        if: always()
+        if: steps.fcs-iac.outputs.exit-code == 0
         run: |
           if [ -f "./vuln-results/results.json" ]; then
             echo "Scan results found:"
