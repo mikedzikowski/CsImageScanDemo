@@ -74,12 +74,12 @@ jobs:
         timeout:          '600'
         output_path: './scan-results'
         version: 2.1.0
-        fail_on:          'critical=0,high=5,medium=10,informational=0'
+        fail_on: 'critical=0,high=5,medium=10,informational=0'
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
     - name: Upload SARIF report to GitHub Code scanning
-      if: steps.fcs.outputs.exit-code = 0
+      if: steps.fcs-iac.outputs.exit-code = 0
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: ./scan-results
