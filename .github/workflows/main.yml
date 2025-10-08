@@ -84,7 +84,7 @@ jobs:
           sarif_file: ./scan-results
 
       - name: Build Docker Image
-        if: always
+        if: always()
         id: build
         run: |
           # Build the image
@@ -102,7 +102,7 @@ jobs:
           docker images --digests localhost/vulnapp
 
       - name: Debug Image Info
-        if: always
+        if: always()
         run: |
           echo "Listing all images:"
           docker images --digests
@@ -111,7 +111,7 @@ jobs:
           docker inspect localhost/vulnapp:latest
 
       - name: Scan Image for Vulnerabilities Only
-        if: always
+        if: always()
         uses: crowdstrike/fcs-action@v2.0.2
         with:
           falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
@@ -128,7 +128,7 @@ jobs:
           FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
       - name: Upload SARIF report
-        if: steps.fcs-iac.outputs.exit-code == 0
+        if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: "./vuln-results"
@@ -147,7 +147,7 @@ jobs:
           echo "✅ Docker Image scan exitcode is ${{ steps.fcs-iac.outputs.exit-code }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Check for scan results
-        if: steps.fcs-iac.outputs.exit-code == 0
+        if: always()
         run: |
           if [ -f "./vuln-results/results.json" ]; then
             echo "Scan results found:"
