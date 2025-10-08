@@ -78,7 +78,7 @@ jobs:
           FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
       - name: Upload SARIF report to GitHub Code scanning
-        if: steps.fcs-iac.outputs.exit-code == 0
+        if: steps.fcs-iac.outputs.exit-code !=0
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ./scan-results
@@ -118,7 +118,7 @@ jobs:
           falcon_region: "us-1"
           scan_type: image
           #image: ${{ steps.build.outputs.image_id }}
-          image: alpine:latest
+          image: nginx:latest
           report_formats: json,sarif
           output_path: "./vuln-results/results.json"
           #socket: 'unix:///var/run/docker.sock'
