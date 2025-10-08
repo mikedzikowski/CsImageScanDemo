@@ -74,7 +74,7 @@ jobs:
         timeout:          '600'
         output_path: './scan-results'
         version: 2.1.0
-        severities:       'high,medium'
+        severities:       'critical,high,medium,informational'
         fail_on:          'critical=0,high=0,medium=0,informational=0'
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
