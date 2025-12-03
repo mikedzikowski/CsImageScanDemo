@@ -4,12 +4,12 @@ name: Falcon Sensor Automation and FCS CLI Image Scan
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   pull_request:
-    branches: ["main"]
+    branches: [ "main" ]
   workflow_dispatch:
   schedule:
-    - cron: "0 * * * *"
+    - cron: '0 * * * *'
 
 jobs:
   sync-sensor:
@@ -20,105 +20,116 @@ jobs:
       security-events: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
+          
+    - name: Login to Azure Container Registry
+      uses: azure/docker-login@v1
+      with:
+        login-server: crmiked.azurecr.io
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Login to Azure Container Registry
-        uses: azure/docker-login@v1
-        with:
-          login-server: crmiked.azurecr.io
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+    - name: Create scan results directory
+      run: mkdir -p ./scan-results
 
-      - name: Create scan results directory
-        run: mkdir -p ./scan-results
+    - name: Download and Process Falcon Container Sensor
+      env:
+        FCSCLIENTID: ${{ vars.FALCON_CLIENT_ID }}
+        FSCSECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
+      run: |
+        echo "⬇️ Downloading Falcon Container Sensor pull script..."
+        curl -sSL -o falcon-container-sensor-pull.sh https://github.com/CrowdStrike/falcon-scripts/releases/latest/download/falcon-container-sensor-pull.sh
+        chmod 777 ./falcon-container-sensor-pull.sh
+        echo "🔄 Copying sensor to ACR..."
+        ./falcon-container-sensor-pull.sh \
+        --client-id "$FCSCLIENTID" \
+        --client-secret "$FSCSECRET" \
+        --region us-1 \
+        --type falcon-sensor \
+        --copy crmiked.azurecr.io/falcon-sensor
+    - name: Run FCS IaC Scan
+      uses: crowdstrike/fcs-action@v2.0.2
+      id: fcs
+      with:
+        falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
+        falcon_region: 'us-1'
+        path: './terraform'
+        report_formats: 'sarif'
+        output_path: './scan-results'
+        version: 2.1.0
+      env:
+        FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
-      - name: Download and Process Falcon Container Sensor
-        env:
-          FCSCLIENTID: ${{ vars.FALCON_CLIENT_ID }}
-          FSCSECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-        run: |
-          echo "⬇️ Downloading Falcon Container Sensor pull script..."
-          curl -sSL -o falcon-container-sensor-pull.sh https://github.com/CrowdStrike/falcon-scripts/releases/latest/download/falcon-container-sensor-pull.sh
-          chmod 777 ./falcon-container-sensor-pull.sh
+    - name: Upload SARIF report to GitHub Code scanning
+      if: always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ./scan-results
+      
+    - name: Build Docker Image
+      id: build
+      run: |
+        # Build the image
+        docker build -t vulnapp:latest .
+        
+        # Get the full image ID including sha256 prefix
+        FULL_ID=$(docker inspect --format='{{.Id}}' vulnapp:latest)
+        echo "Full Image ID: $FULL_ID"
+        echo "image_id=$FULL_ID" >> $GITHUB_OUTPUT
+        
+        # Tag the image with localhost registry
+        docker tag vulnapp:latest localhost/vulnapp:latest
+        
+        echo "Tagged image details:"
+        docker images --digests localhost/vulnapp
+    - name: Debug Image Info
+      run: |
+        echo "Listing all images:"
+        docker images --digests
+        echo "Image to be scanned: ${{ steps.build.outputs.image_id }}"
+        echo "Detailed image inspect:"
+        docker inspect localhost/vulnapp:latest
+    - name: Scan Image for Vulnerabilities Only
+      uses: crowdstrike/fcs-action@v2.0.2
+      with:
+        falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
+        falcon_region: 'us-1'
+        scan_type: image
+        #image: ${{ steps.build.outputs.image_id }}
+        image: alpine:latest
+        report_formats: json,sarif
+        output_path: './vuln-results/results.json'
+        #socket: 'unix:///var/run/docker.sock'
+        version: 2.1.0
+      env:
+        FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
-          echo "🔄 Copying sensor to ACR..."
-          ./falcon-container-sensor-pull.sh \
-          --client-id "$FCSCLIENTID" \
-          --client-secret "$FSCSECRET" \
-          --region us-1 \
-          --type falcon-sensor \
-          --copy crmiked.azurecr.io/falcon-sensor
+    - name: Upload SARIF report
+      if: always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: './vuln-results'
+        category: 'container-scan'
+        wait-for-processing: true
 
-      - name: Build Docker Image
-        if: always()
-        id: build
-        run: |
-          # Build the image
-          docker build -t vulnapp:latest .
-
-          # Get the full image ID including sha256 prefix
-          FULL_ID=$(docker inspect --format='{{.Id}}' vulnapp:latest)
-          echo "Full Image ID: $FULL_ID"
-          echo "image_id=$FULL_ID" >> $GITHUB_OUTPUT
-
-          # Tag the image with localhost registry
-          docker tag vulnapp:latest localhost/vulnapp:latest
-
-          echo "Tagged image details:"
-          docker images --digests localhost/vulnapp
-
-      - name: Debug Image Info
-        run: |
-          echo "Listing all images:"
-          docker images --digests
-          echo "Image to be scanned: ${{ steps.build.outputs.image_id }}"
-          echo "Detailed image inspect:"
-          docker inspect localhost/vulnapp:latest
-
-      - name: Scan Image for Vulnerabilities Only
-        id: image
-        uses: crowdstrike/fcs-action@v2.0.2
-        with:
-          falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
-          falcon_region: "us-1"
-          scan_type: image
-          #image: ${{ steps.build.outputs.image_id }}
-          image: nginx:latest
-          report_formats: json,sarif
-          output_path: './vuln-results/results.json'
-          #socket: 'unix:///var/run/docker.sock'
-          version: 2.1.0
-          upload_results: true
-        env:
-          FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-
-      - name: Upload SARIF report
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: "./vuln-results/"
-          category: "container-scan"
-          wait-for-processing: true
-
-      - name: Workflow Summary
-        if: steps.image.outputs.exit-code != 0
-        run: |
-          echo "## Falcon Sensor Sync Complete" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Environment verified" >> $GITHUB_STEP_SUMMARY
-          echo "✅ ACR login successful" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Docker image built with ID: ${{ steps.build.outputs.image_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Docker Image scan exitcode is ${{ steps.fcs-iac.outputs.exit-code }}" >> $GITHUB_STEP_SUMMARY
-
-      - name: Check for scan results
-        if: steps.image.outputs.exit-code != 0
-        run: |
-          if [ -f "./vuln-results/results.json" ]; then
-            echo "Scan results found:"
-            cat "./vuln-results/results.json"
-          else
-            echo "No scan results found"
-            exit 1
-          fi
+    - name: Workflow Summary
+      if: always()
+      run: |
+        echo "## Falcon Sensor Sync Complete" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Environment verified" >> $GITHUB_STEP_SUMMARY
+        echo "✅ ACR login successful" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Docker image built with ID: ${{ steps.build.outputs.image_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
+  
+    - name: Check for scan results
+      if: always()
+      run: |
+        if [ -f "./vuln-results/results.json" ]; then
+          echo "Scan results found:"
+          cat "./vuln-results/results.json"
+        else
+          echo "No scan results found"
+          exit 1
+        fi
