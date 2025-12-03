@@ -126,15 +126,18 @@ jobs:
       if: success()
       run: |
         if [ -f "./vuln-results/results.json" ]; then
-          VULN_COUNT=$(jq '.vulnerabilities | length' ./vuln-results/results.json || echo "0")
+          # First, let's see what we're dealing with
+          echo "Debug: Showing content of results file:"
+          cat "./vuln-results/results.json"
           
-          if [ "$VULN_COUNT" -eq 0 ]; then
-            echo "✅ Your image passes security assessment - OK to proceed"
-            exit 0
-          else
+          # Check if the file contains any vulnerability indicators
+          if grep -i "vulnerability" "./vuln-results/results.json" > /dev/null; then
             echo "❌ Your image did not pass security assessment - stopping workflow"
             echo "Please resolve security findings before proceeding"
             exit 1
+          else
+            echo "✅ Your image passes security assessment - OK to proceed"
+            exit 0
           fi
         else
           echo "❌ No assessment results found"
