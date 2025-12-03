@@ -126,11 +126,6 @@ jobs:
       if: success()
       run: |
         if [ -f "./vuln-results/results.json" ]; then
-          # First, let's see what we're dealing with
-          echo "Debug: Showing content of results file:"
-          cat "./vuln-results/results.json"
-          
-          # Check if the file contains any vulnerability indicators
           if grep -i "vulnerability" "./vuln-results/results.json" > /dev/null; then
             echo "❌ Your image did not pass security assessment - stopping workflow"
             echo "Please resolve security findings before proceeding"
