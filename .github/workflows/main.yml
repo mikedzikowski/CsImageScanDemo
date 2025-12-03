@@ -121,7 +121,26 @@ jobs:
         sarif_file: './vuln-results'
         category: 'container-scan'
         wait-for-processing: true
-
+        
+    - name: Evaluate Image Assessment
+      if: success()
+      run: |
+        if [ -f "./vuln-results/results.json" ]; then
+          VULN_COUNT=$(jq '.vulnerabilities | length' ./vuln-results/results.json || echo "0")
+          
+          if [ "$VULN_COUNT" -eq 0 ]; then
+            echo "✅ Your image passes security assessment - OK to proceed"
+            exit 0
+          else
+            echo "❌ Your image did not pass security assessment - stopping workflow"
+            echo "Please resolve security findings before proceeding"
+            exit 1
+          fi
+        else
+          echo "❌ No assessment results found"
+          exit 1
+        fi
+        
   # Summary 
     - name: Workflow Summary
       if: always()
