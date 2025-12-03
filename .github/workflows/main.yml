@@ -96,11 +96,11 @@ jobs:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
         scan_type: image
-        #image: ${{ steps.build.outputs.image_id }}
-        image: alpine:latest
+        image: ${{ steps.build.outputs.image_id }}
+        #image: alpine:latest
         report_formats: json,sarif
         output_path: './vuln-results/results.json'
-        #socket: 'unix:///var/run/docker.sock'
+        socket: 'unix:///var/run/docker.sock'
         version: 2.1.0
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
