@@ -23,31 +23,33 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
           
-    - name: Login to Azure Container Registry
-      uses: azure/docker-login@v1
-      with:
-        login-server: crmiked.azurecr.io
-        username: ${{ secrets.ACR_USERNAME }}
-        password: ${{ secrets.ACR_PASSWORD }}
+    # - name: Login to Azure Container Registry
+    #   uses: azure/docker-login@v1
+    #   with:
+    #     login-server: crmiked.azurecr.io
+    #     username: ${{ secrets.ACR_USERNAME }}
+    #     password: ${{ secrets.ACR_PASSWORD }}
 
     - name: Create scan results directory
       run: mkdir -p ./scan-results
 
-    - name: Download and Process Falcon Container Sensor
-      env:
-        FCSCLIENTID: ${{ vars.FALCON_CLIENT_ID }}
-        FSCSECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-      run: |
-        echo "⬇️ Downloading Falcon Container Sensor pull script..."
-        curl -sSL -o falcon-container-sensor-pull.sh https://github.com/CrowdStrike/falcon-scripts/releases/latest/download/falcon-container-sensor-pull.sh
-        chmod 777 ./falcon-container-sensor-pull.sh
-        echo "🔄 Copying sensor to ACR..."
-        ./falcon-container-sensor-pull.sh \
-        --client-id "$FCSCLIENTID" \
-        --client-secret "$FSCSECRET" \
-        --region us-1 \
-        --type falcon-sensor \
-        --copy crmiked.azurecr.io/falcon-sensor
+    # - name: Download and Process Falcon Container Sensor
+    #   env:
+    #     FCSCLIENTID: ${{ vars.FALCON_CLIENT_ID }}
+    #     FSCSECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
+    #   run: |
+    #     echo "⬇️ Downloading Falcon Container Sensor pull script..."
+    #     curl -sSL -o falcon-container-sensor-pull.sh https://github.com/CrowdStrike/falcon-scripts/releases/latest/download/falcon-container-sensor-pull.sh
+    #     chmod 777 ./falcon-container-sensor-pull.sh
+    #     echo "🔄 Copying sensor to ACR..."
+    #     ./falcon-container-sensor-pull.sh \
+    #     --client-id "$FCSCLIENTID" \
+    #     --client-secret "$FSCSECRET" \
+    #     --region us-1 \
+    #     --type falcon-sensor \
+    #     --copy crmiked.azurecr.io/falcon-sensor
+
+    # Perform IaC scan on terraform code
     - name: Run FCS IaC Scan
       uses: crowdstrike/fcs-action@v2.0.2
       id: fcs
@@ -66,7 +68,8 @@ jobs:
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: ./scan-results
-      
+
+    # Build docker image using Dockerfile 
     - name: Build Docker Image
       id: build
       run: |
@@ -83,6 +86,8 @@ jobs:
         
         echo "Tagged image details:"
         docker images --digests localhost/vulnapp
+
+    # Find image 
     - name: Debug Image Info
       run: |
         echo "Listing all images:"
@@ -90,6 +95,8 @@ jobs:
         echo "Image to be scanned: ${{ steps.build.outputs.image_id }}"
         echo "Detailed image inspect:"
         docker inspect localhost/vulnapp:latest
+
+    # Scan image for vulns
     - name: Scan Image for Vulnerabilities Only
       uses: crowdstrike/fcs-action@v2.0.2
       with:
@@ -105,6 +112,7 @@ jobs:
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
+   # Upload SARIF to CodeQL for Developers 
     - name: Upload SARIF report
       if: always()
       uses: github/codeql-action/upload-sarif@v3
@@ -113,6 +121,7 @@ jobs:
         category: 'container-scan'
         wait-for-processing: true
 
+  # Summary 
     - name: Workflow Summary
       if: always()
       run: |
@@ -122,7 +131,8 @@ jobs:
         echo "✅ Sensor downloaded and pushed" >> $GITHUB_STEP_SUMMARY
         echo "✅ Docker image built with ID: ${{ steps.build.outputs.image_id }}" >> $GITHUB_STEP_SUMMARY
         echo "✅ Container image scan completed" >> $GITHUB_STEP_SUMMARY
-  
+
+  # Validate scan results 
     - name: Check for scan results
       if: always()
       run: |
