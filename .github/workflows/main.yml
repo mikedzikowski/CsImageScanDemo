@@ -58,6 +58,7 @@ jobs:
         severities: 'critical,high,medium'
         upload_results: true
         version: 2.1.7
+        project_name: 'my-awesome-project'
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
@@ -73,6 +74,7 @@ jobs:
         output_path: './scan-results'
         upload_results: true
         version: 2.1.7
+        project_name: 'my-awesome-project'
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
