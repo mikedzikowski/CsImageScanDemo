@@ -59,7 +59,7 @@ jobs:
         path: './terraform'
         report_formats: 'sarif'
         output_path: './scan-results'
-        version: 2.1.0
+        version: 3.0.0
         upload_results: true
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
@@ -109,7 +109,7 @@ jobs:
         report_formats: json,sarif
         output_path: './vuln-results/results.json'
         socket: 'unix:///var/run/docker.sock'
-        version: 2.1.0
+        version: 3.0.0
         upload_results: true
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
