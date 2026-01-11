@@ -49,19 +49,19 @@ jobs:
     #     --type falcon-sensor \
     #     --copy crmiked.azurecr.io/falcon-sensor
 
-    - name: Run FCS IaC Scan 1
-      uses: crowdstrike/fcs-action@v3.0.0
-      with:
-        falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
-        falcon_region: 'us-1'
-        path: './terraform'
-        severities: 'critical,high,medium'
-        upload_results: true
-        version: 2.1.7
-        project_name: 'my-awesome-project'
-      env:
-        FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-
+    # - name: Run FCS IaC Scan 1
+    #   uses: crowdstrike/fcs-action@v3.0.0
+    #   with:
+    #     falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
+    #     falcon_region: 'us-1'
+    #     path: './terraform'
+    #     severities: 'critical,high,medium'
+    #     upload_results: true
+    #     version: 2.1.7
+    #     project_name: 'my-awesome-project'
+    #   env:
+    #     FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
+    
     # Perform IaC scan on terraform code
     - name: Run FCS IaC Scan
       uses: crowdstrike/fcs-action@v3.0.0
