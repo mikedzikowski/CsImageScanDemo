@@ -57,6 +57,7 @@ jobs:
         path: './terraform'
         severities: 'critical,high,medium'
         upload_results: true
+        version: 2.1.7
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
@@ -71,6 +72,7 @@ jobs:
         report_formats: 'sarif'
         output_path: './scan-results'
         upload_results: true
+        version: 2.1.7
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
@@ -120,6 +122,7 @@ jobs:
         output_path: './vuln-results/results.json'
         socket: 'unix:///var/run/docker.sock'
         upload_results: true
+        version: 2.1.7
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
