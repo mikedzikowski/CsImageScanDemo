@@ -50,7 +50,7 @@ jobs:
     #     --copy crmiked.azurecr.io/falcon-sensor
 
     - name: Run FCS IaC Scan 1
-      uses: crowdstrike/fcs-action@v2.0..0
+      uses: crowdstrike/fcs-action@v3.0.0
       with:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
@@ -62,7 +62,7 @@ jobs:
 
     # Perform IaC scan on terraform code
     - name: Run FCS IaC Scan
-      uses: crowdstrike/fcs-action@v2.0.2
+      uses: crowdstrike/fcs-action@v3.0.0
       id: fcs
       with:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
@@ -70,7 +70,6 @@ jobs:
         path: './terraform'
         report_formats: 'sarif'
         output_path: './scan-results'
-        version: 2.1.7
         upload_results: true
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
@@ -120,7 +119,6 @@ jobs:
         report_formats: json,sarif
         output_path: './vuln-results/results.json'
         socket: 'unix:///var/run/docker.sock'
-        version: 2.1.7
         upload_results: true
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
