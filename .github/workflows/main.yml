@@ -112,7 +112,7 @@ jobs:
         docker inspect localhost/vulnapp:latest
 
     # Scan image for vulns
-    - name: Scan Image 
+    - name: Scan Image and generate SBOM
       uses: crowdstrike/fcs-action@v3.0.0
       with:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
