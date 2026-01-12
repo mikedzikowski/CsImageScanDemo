@@ -112,17 +112,17 @@ jobs:
         docker inspect localhost/vulnapp:latest
 
     # Scan image for vulns
-    - name: Scan Image for Vulnerabilities Only
-      uses: crowdstrike/fcs-action@v2.0.2
+    - name: Scan Image 
+      uses: crowdstrike/fcs-action@v3.0.0
       with:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
         scan_type: image
-        image: ${{ steps.build.outputs.image_id }}
-        #image: alpine:latest
-        report_formats: json,sarif
-        output_path: './vuln-results/results.json'
-        socket: 'unix:///var/run/docker.sock'
+        #image: ${{ steps.build.outputs.image_id }}
+        image: alpine:latest
+        report_formats: json,sarif, sbom-cylconedx
+        # output_path: './vuln-results/results.json'
+        # socket: 'unix:///var/run/docker.sock'
         upload_results: true
         version: 2.1.7
       env:
