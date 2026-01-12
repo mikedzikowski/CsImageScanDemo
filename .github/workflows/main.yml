@@ -120,7 +120,7 @@ jobs:
         scan_type: image
         #image: ${{ steps.build.outputs.image_id }}
         image: alpine:latest
-        report_formats: json,sarif,sbom-cylconedx
+        report_formats: json,sarif,cyclonedx-json
         output_path: './vuln-results/results.json'
         # socket: 'unix:///var/run/docker.sock'
         upload_results: true
