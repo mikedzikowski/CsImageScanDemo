@@ -121,7 +121,7 @@ jobs:
         #image: ${{ steps.build.outputs.image_id }}
         image: alpine:latest
         report_formats: json,sarif,sbom-cylconedx
-        # output_path: './vuln-results/results.json'
+        output_path: './vuln-results/results.json'
         # socket: 'unix:///var/run/docker.sock'
         upload_results: true
         version: 2.1.7
