@@ -41,8 +41,8 @@ jobs:
     - name: Build Docker Image
       id: build
       run: |
-        docker build -t vulnapp:latest .
-        FULL_ID=$(docker inspect --format='{{.Id}}' vulnapp:latest)
+        docker build -t ubuntu:latest .
+        FULL_ID=$(docker inspect --format='{{.Id}}' ubuntu:latest)
         echo "image_id=$FULL_ID" >> $GITHUB_OUTPUT
         echo "✅ Built image: $FULL_ID"
 
@@ -54,7 +54,7 @@ jobs:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
         scan_type: image
-        image: vulnapp:latest
+        image: ubuntu:latest
         output_path: './image-scan-results.json'
         report_formats: json,sarif
         upload_results: true
@@ -76,8 +76,8 @@ jobs:
       run: |
         echo "✅ Security scan passed - proceeding with image push"
         # Uncomment when ready to push
-        # docker tag vulnapp:latest crmiked.azurecr.io/vulnapp:latest
-        # docker push crmiked.azurecr.io/vulnapp:latest
+        # docker tag ubuntu:latest crmiked.azurecr.io/ubuntu:latest
+        # docker push crmiked.azurecr.io/ubuntu:latest
 
     # Optional: Deploy or additional steps
     - name: Deploy Application
@@ -96,7 +96,7 @@ jobs:
         echo "- Exit Code: ${{ steps.fcs-iac.outputs.exit-code }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Container Image Scan" >> $GITHUB_STEP_SUMMARY
-        echo "- Image: vulnapp:latest" >> $GITHUB_STEP_SUMMARY
+        echo "- Image: ubuntu:latest" >> $GITHUB_STEP_SUMMARY
         echo "- Image ID: ${{ steps.build.outputs.image_id }}" >> $GITHUB_STEP_SUMMARY
         echo "- Exit Code: ${{ steps.fcs-image.outputs.exit-code }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
