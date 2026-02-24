@@ -32,7 +32,7 @@ jobs:
     #     report_formats: 'sarif,json'
     #     output_path: './iac-scan-results'
     #     upload_results: true
-    #     version: 3.0.0
+    #     version: 2.1.7
     #     project_name: 'my-awesome-project'
     #   env:
     #     FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
@@ -58,7 +58,7 @@ jobs:
         output_path: './image-scan-results.json'
         report_formats: json,sarif
         upload_results: true
-        version: 3.0.0
+        version: 2.1.7
       env:
         FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
