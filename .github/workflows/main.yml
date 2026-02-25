@@ -41,8 +41,8 @@ jobs:
     - name: Build Docker Image
       id: build
       run: |
-        docker build -t alpine:latest .
-        FULL_ID=$(docker inspect --format='{{.Id}}' alpine:latest)
+        docker build -t rapidfort/curl:latest .
+        FULL_ID=$(docker inspect --format='{{.Id}}' rapidfort/curl:latest)
         echo "image_id=$FULL_ID" >> $GITHUB_OUTPUT
         echo "✅ Built image: $FULL_ID"
 
@@ -54,7 +54,7 @@ jobs:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
         scan_type: image
-        image: alpine:latest
+        image: rapidfort/curl:latest
         output_path: './image-scan-results.json'
         report_formats: json,sarif
         upload_results: true
@@ -76,8 +76,8 @@ jobs:
       run: |
         echo "✅ Security scan passed - proceeding with image push"
         # Uncomment when ready to push
-        # docker tag alpine:latest crmiked.azurecr.io/alpine:latest
-        # docker push crmiked.azurecr.io/alpine:latest
+        # docker tag rapidfort/curl:latest crmiked.azurecr.io/rapidfort/curl:latest
+        # docker push crmiked.azurecr.io/rapidfort/curl:latest
 
     # Optional: Deploy or additional steps
     - name: Deploy Application
@@ -96,7 +96,7 @@ jobs:
         echo "- Exit Code: ${{ steps.fcs-iac.outputs.exit-code }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Container Image Scan" >> $GITHUB_STEP_SUMMARY
-        echo "- Image: alpine:latest" >> $GITHUB_STEP_SUMMARY
+        echo "- Image: rapidfort/curl:latest" >> $GITHUB_STEP_SUMMARY
         echo "- Image ID: ${{ steps.build.outputs.image_id }}" >> $GITHUB_STEP_SUMMARY
         echo "- Exit Code: ${{ steps.fcs-image.outputs.exit-code }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
