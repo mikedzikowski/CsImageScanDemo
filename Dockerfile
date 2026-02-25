@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM alpine:latest
 
 # Create test directories
 RUN mkdir -p /.azure
