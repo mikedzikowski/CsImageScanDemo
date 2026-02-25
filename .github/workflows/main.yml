@@ -76,8 +76,8 @@ jobs:
       run: |
         echo "✅ Security scan passed - proceeding with image push"
         # Uncomment when ready to push
-        # docker tag rapidfort/curl:latest crmiked.azurecr.io/rapidfort/curl:latest
-        # docker push crmiked.azurecr.io/rapidfort/curl:latest
+        # docker tag rapidfort/curl:latest youracr.azurecr.io/rapidfort/curl:latest
+        # docker push youracr.azurecr.io/rapidfort/curl:latest
 
     # Optional: Deploy or additional steps
     - name: Deploy Application
