@@ -46,7 +46,23 @@ jobs:
         echo "image_id=$FULL_ID" >> $GITHUB_OUTPUT
         echo "✅ Built image: $FULL_ID"
 
-    # Container Image Scan
+    # # Container Image Scan
+    # - name: Scan Container Image
+    #   uses: crowdstrike/fcs-action@v3.0.0
+    #   id: fcs-image
+    #   with:
+    #     falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
+    #     falcon_region: 'us-1'
+    #     scan_type: image
+    #     image: rapidfort/curl:latest
+    #     output_path: './image-scan-results.json'
+    #     report_formats: json,sarif
+    #     upload_results: true
+    #     version: 2.1.7
+    #   env:
+    #     FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
+
+    # Container Image Scan - using image ID
     - name: Scan Container Image
       uses: crowdstrike/fcs-action@v3.0.0
       id: fcs-image
@@ -54,7 +70,7 @@ jobs:
         falcon_client_id: ${{ vars.FALCON_CLIENT_ID }}
         falcon_region: 'us-1'
         scan_type: image
-        image: rapidfort/curl:latest
+        image: ${{ steps.build.outputs.image_id }}  # ✅ Uses exact image ID
         output_path: './image-scan-results.json'
         report_formats: json,sarif
         upload_results: true
