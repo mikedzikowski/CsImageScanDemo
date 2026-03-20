@@ -41,7 +41,15 @@ jobs:
     - name: Build Docker Image
       id: build
       run: |
-        docker build -t ubuntu:latest .
+        docker build \
+          --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+          --build-arg BUILD_VERSION="${{ github.run_number }}" \
+          --build-arg GIT_COMMIT="${{ github.sha }}" \
+          --build-arg GIT_BRANCH="${{ github.ref_name }}" \
+          --build-arg GIT_REPO="${{ github.repository }}" \
+          --build-arg WORKFLOW_NAME="${{ github.workflow }}" \
+          --build-arg TRIGGERED_BY="${{ github.actor }}" \
+          -t ubuntu:latest .
         FULL_ID=$(docker inspect --format='{{.Id}}' ubuntu:latest)
         echo "image_id=$FULL_ID" >> $GITHUB_OUTPUT
         echo "✅ Built image: $FULL_ID"
