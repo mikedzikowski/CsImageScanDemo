@@ -17,7 +17,7 @@ LABEL org.opencontainers.image.created=$BUILD_DATE \
       org.opencontainers.image.vendor="CrowdStrike" \
       build.branch=$GIT_BRANCH \
       build.number=$BUILD_VERSION \
-      maintainer="michael.dzikowski@crowdstrike.com"
+      maintainer="noreply@crowdstrike.com"
 
 # Your app setup
 WORKDIR /app
