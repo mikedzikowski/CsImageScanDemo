@@ -21,7 +21,7 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       build.triggered_by="${TRIGGERED_BY}" \
       build.team="platform-engineering" \
       build.environment="production" \
-      maintainer="michael.dzikowski@crowdstrike.com"
+      maintainer="noreply@crowdstrike.com"
 
 WORKDIR /app
 COPY . .
